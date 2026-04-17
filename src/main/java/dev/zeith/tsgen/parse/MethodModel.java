@@ -18,6 +18,11 @@ public record MethodModel(
 		return (access & Opcodes.ACC_STATIC) != 0;
 	}
 	
+	public boolean isBridge()
+	{
+		return (access & Opcodes.ACC_BRIDGE) != 0;
+	}
+	
 	public boolean isFunctionalMethod()
 	{
 		return (access & Opcodes.ACC_ABSTRACT) != 0;

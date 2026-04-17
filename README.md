@@ -20,10 +20,6 @@ dependencies {
 ## Minimal usage example
 This simple code reads the class file from file, parses the internal class model and converts it into typescript, writing it into file:
 ```java
-import dev.zeith.tsgen.TypeScriptGenerator;
-import dev.zeith.tsgen.parse.ClassModel;
-import java.nio.file.*;
-
 byte[] bytecode = Files.readAllBytes(Path.of("Example.class"));
 TypeScriptGenerator gen = new TypeScriptGenerator(ClassModel.parse(bytecode));
 
@@ -48,7 +44,7 @@ BulkTypeScriptExporter exporter = BulkTypeScriptExporter
     .builder()
     .outDir(targetDir)
     // if you want to separate into individual classes:
-    .filePath(BulkTypeScriptExporter.pathFromPackage())
+    .pathResolver(IPathResolver.FROM_CLASS_NAME)
     .build();
 
 // Check every file/entry in dir/jar

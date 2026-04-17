@@ -249,7 +249,7 @@ public class TypeScriptGenerator
 	protected void appendRenamedMethod(String prefix, StringBuilder sb, MethodModel method, String name)
 	{
 		// Skip invalid method names
-		if(!TS_IDENTIFIER.test(name)) return;
+		if(method.isBridge() || !TS_IDENTIFIER.test(name)) return;
 		
 		if(prefix != null) sb.append(prefix);
 		sb.append(name);

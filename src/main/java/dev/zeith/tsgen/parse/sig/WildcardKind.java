@@ -1,6 +1,6 @@
 package dev.zeith.tsgen.parse.sig;
 
-enum WildcardKind
+public enum WildcardKind
 {
 	NONE,
 	EXTENDS,

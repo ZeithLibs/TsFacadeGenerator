@@ -1,18 +1,18 @@
 package dev.zeith.tsgen.imports;
 
+import dev.zeith.tsgen.IPathResolver;
 import dev.zeith.tsgen.util.TypeUtil;
 import lombok.Setter;
 import org.objectweb.asm.Type;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.*;
 
 public abstract class BaseImportModel
 		implements IImportModel, Cloneable
 {
 	@Setter
-	protected Function<Type, String> filePath = ofType -> ofType.getInternalName() + ".ts";
+	protected IPathResolver filePath = IPathResolver.FROM_CLASS_NAME;
 	
 	protected abstract BaseImportModel cloneInstance();
 	
@@ -21,8 +21,8 @@ public abstract class BaseImportModel
 	protected String resolvePath(Type ourType, Type importType)
 	{
 		return TypeUtil.relativePath(
-				filePath.apply(ourType),
-				filePath.apply(importType)
+				filePath.getPath(ourType),
+				filePath.getPath(importType)
 		);
 	}
 	

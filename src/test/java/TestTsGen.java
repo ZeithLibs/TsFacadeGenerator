@@ -1,4 +1,4 @@
-import dev.zeith.tsgen.BulkTypeScriptExporter;
+import dev.zeith.tsgen.*;
 import dev.zeith.tsgen.parse.*;
 
 import java.io.*;
@@ -23,7 +23,7 @@ public class TestTsGen
 				.builder()
 				.outDir(targetDir)
 				// if you want to separate into individual classes:
-				.filePath(BulkTypeScriptExporter.pathFromPackage())
+				.pathResolver(IPathResolver.FROM_CLASS_NAME)
 				.build();
 		
 		// Check every file/entry in dir/jar

@@ -2,7 +2,6 @@ package dev.zeith.tsgen;
 
 import dev.zeith.tsgen.imports.*;
 import dev.zeith.tsgen.parse.ClassModel;
-import dev.zeith.tsgen.util.TypeUtil;
 import lombok.*;
 import org.objectweb.asm.Type;
 
@@ -11,14 +10,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.*;
+import java.util.function.Consumer;
 
 public class BulkTypeScriptExporter
 {
 	protected final File outDir;
 	protected final BaseImportModel importModel;
 	protected final Consumer<TypeScriptGenerator> configurator;
-	protected final Function<Type, String> filePath;
+	protected final @Getter IPathResolver pathResolver;
 	
 	@Getter
 	protected final Set<File> toOptimize = ConcurrentHashMap.newKeySet();
@@ -28,7 +27,7 @@ public class BulkTypeScriptExporter
 			File outDir,
 			BaseImportModel importModel,
 			Consumer<TypeScriptGenerator> configurator,
-			Function<Type, String> filePath
+			IPathResolver pathResolver
 	)
 	{
 		this.outDir = Objects.requireNonNull(outDir, "outDir");
@@ -37,7 +36,7 @@ public class BulkTypeScriptExporter
 		this.configurator = configurator != null ? configurator : gen ->
 		{
 		};
-		this.filePath = filePath != null ? filePath : pathFromPackage();
+		this.pathResolver = pathResolver != null ? pathResolver : IPathResolver.FROM_PACKAGE;
 	}
 	
 	public File export(ClassModel model)
@@ -49,9 +48,8 @@ public class BulkTypeScriptExporter
 		// Create parent directory
 		dst.toPath().getParent().toFile().mkdirs();
 		
-		TypeScriptGenerator gen = new TypeScriptGenerator(model);
+		TypeScriptGenerator gen = new TypeScriptGenerator(model).withImportModel(this.importModel);
 		StringBuilder sb = new StringBuilder();
-		
 		configurator.accept(gen);
 		
 		if(dst.isFile())
@@ -99,21 +97,11 @@ public class BulkTypeScriptExporter
 	
 	public String getFilePathOf(String internalName)
 	{
-		return filePath.apply(Type.getObjectType(internalName));
+		return pathResolver.getPath(Type.getObjectType(internalName));
 	}
 	
 	public String getFilePathOf(Type name)
 	{
-		return filePath.apply(name);
-	}
-	
-	public static Function<Type, String> pathFromPackage()
-	{
-		return type -> TypeUtil.getPackagePath(type) + ".ts";
-	}
-	
-	public static Function<Type, String> pathFromClass()
-	{
-		return type -> type.getInternalName() + ".ts";
+		return pathResolver.getPath(name);
 	}
 }

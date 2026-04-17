@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+group = 'dev.zeith.libs'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("org.jetbrains:annotations:$jbAnnotation")
+    implementation("org.ow2.asm:asm:$owasm")
+    implementation("org.ow2.asm:asm-tree:$owasm")
+    compileOnly "org.projectlombok:lombok:$lombok"
+    annotationProcessor "org.projectlombok:lombok:$lombok"
+    testCompileOnly "org.projectlombok:lombok:$lombok"
+    testAnnotationProcessor "org.projectlombok:lombok:$lombok"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'dev.zeith.libs'
+            artifactId = 'TsFacadeGenerator'
+
+            from components.java
+
+            pom {
+                name = 'TsFacadeGenerator'
+                description = 'General-purpose TypeScript definition generator from java bytecode.'
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url System.env.MAVEN_URL
+        }
+    }
+}

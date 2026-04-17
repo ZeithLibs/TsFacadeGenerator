@@ -106,7 +106,7 @@ public class TypeScriptGenerator
 		for(var field : model.fields())
 		{
 			if(!field.isStatic()) continue;
-			appendField(out.append(newline).append(indent).append("static "), field);
+			appendField(newline + indent + "static ", out, field);
 			needNewLine = true;
 		}
 		if(needNewLine)
@@ -118,7 +118,7 @@ public class TypeScriptGenerator
 		for(var method : model.methods())
 		{
 			if(!method.isStatic()) continue;
-			appendMethod(out.append(newline).append(indent).append("static "), method);
+			appendMethod(newline + indent + "static ", out, method);
 			needNewLine = true;
 		}
 		if(needNewLine)
@@ -169,8 +169,8 @@ public class TypeScriptGenerator
 			List<MethodModel> fnMethods = model.methods().stream().filter(MethodModel::isFunctionalMethod).toList();
 			if(fnMethods.size() == 1)
 			{
-				var method = fnMethods.getFirst();
-				appendRenamedMethod(out.append(newline).append(indent), method, "");
+				var method = fnMethods.get(0);
+				appendRenamedMethod(newline + indent, out, method, "");
 				needNewLine = true;
 			}
 		}
@@ -178,7 +178,7 @@ public class TypeScriptGenerator
 		for(var field : model.fields())
 		{
 			if(field.isStatic()) continue;
-			appendField(out.append(newline).append(indent), field);
+			appendField(newline + indent, out, field);
 			needNewLine = true;
 		}
 		if(needNewLine)
@@ -190,7 +190,7 @@ public class TypeScriptGenerator
 		for(var method : model.methods())
 		{
 			if(method.isStatic()) continue;
-			appendMethod(out.append(newline).append(indent), method);
+			appendMethod(newline + indent, out, method);
 			needNewLine = true;
 		}
 		if(needNewLine)
@@ -229,27 +229,29 @@ public class TypeScriptGenerator
 		if(!lst.isEmpty()) sb.append(" extends ").append(remapType(String.join(delim, lst)));
 	}
 	
-	protected void appendField(StringBuilder sb, FieldModel field)
+	protected void appendField(String prefix, StringBuilder sb, FieldModel field)
 	{
 		// Skip invalid field names
 		if(!TS_IDENTIFIER.test(field.name())) return;
 		
+		if(prefix != null) sb.append(prefix);
 		sb.append(field.name())
 		  .append(": ")
 		  .append(mapType(field.type()))
 		  .append(";");
 	}
 	
-	protected void appendMethod(StringBuilder sb, MethodModel method)
+	protected void appendMethod(String prefix, StringBuilder sb, MethodModel method)
 	{
-		appendRenamedMethod(sb, method, method.name());
+		appendRenamedMethod(prefix, sb, method, method.name());
 	}
 	
-	protected void appendRenamedMethod(StringBuilder sb, MethodModel method, String name)
+	protected void appendRenamedMethod(String prefix, StringBuilder sb, MethodModel method, String name)
 	{
 		// Skip invalid method names
 		if(!TS_IDENTIFIER.test(name)) return;
 		
+		if(prefix != null) sb.append(prefix);
 		sb.append(name);
 		
 		// type args

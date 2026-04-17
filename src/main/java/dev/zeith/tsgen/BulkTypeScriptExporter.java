@@ -3,7 +3,7 @@ package dev.zeith.tsgen;
 import dev.zeith.tsgen.imports.*;
 import dev.zeith.tsgen.parse.ClassModel;
 import dev.zeith.tsgen.util.TypeUtil;
-import lombok.Builder;
+import lombok.*;
 import org.objectweb.asm.Type;
 
 import java.io.*;
@@ -20,6 +20,7 @@ public class BulkTypeScriptExporter
 	protected final Consumer<TypeScriptGenerator> configurator;
 	protected final Function<Type, String> filePath;
 	
+	@Getter
 	protected final Set<File> toOptimize = ConcurrentHashMap.newKeySet();
 	
 	@Builder
@@ -39,7 +40,7 @@ public class BulkTypeScriptExporter
 		this.filePath = filePath != null ? filePath : pathFromPackage();
 	}
 	
-	public void export(ClassModel model)
+	public File export(ClassModel model)
 			throws IOException
 	{
 		File dst = new File(outDir, getFilePathOf(model.name())).getAbsoluteFile();
@@ -73,21 +74,32 @@ public class BulkTypeScriptExporter
 				out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
 			}
 		}
+		
+		return dst;
 	}
 	
 	public void optimize()
 			throws IOException
 	{
 		for(File file : toOptimize)
-		{
-			String optimized = importModel.reduceImports(file.getName(), Files.lines(file.toPath()));
-			if(optimized != null) Files.writeString(file.toPath(), optimized, StandardCharsets.UTF_8);
-		}
+			optimize(file, importModel);
+	}
+	
+	public static void optimize(File file, IImportModel importModel)
+			throws IOException
+	{
+		String optimized = importModel.reduceImports(file.getName(), Files.lines(file.toPath()));
+		if(optimized != null) Files.writeString(file.toPath(), optimized, StandardCharsets.UTF_8);
 	}
 	
 	public void reset()
 	{
 		toOptimize.clear();
+	}
+	
+	public String getFilePathOf(String internalName)
+	{
+		return filePath.apply(Type.getObjectType(internalName));
 	}
 	
 	public String getFilePathOf(Type name)

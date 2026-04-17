@@ -84,33 +84,6 @@ public class TypeScriptGenerator
 		}
 	}
 	
-	protected void appendClassExtensions(StringBuilder out)
-	{
-		ClassGeneric generic = model.generic();
-		if(generic != null)
-		{
-			List<SimpleGeneric> gens = new ArrayList<>();
-			gens.add(generic.superClass());
-			gens.addAll(generic.interfaces());
-			if(!gens.isEmpty())
-				addGenericExtends(out, gens, ", ");
-		} else
-		{
-			List<Type> allExtends = new ArrayList<>();
-			Type superType = model.superName();
-			if(superType != null) allExtends.add(superType);
-			allExtends.addAll(model.interfaces());
-			if(!allExtends.isEmpty())
-			{
-				List<String> lst = new ArrayList<>();
-				for(var gen : allExtends) lst.add(mapType(false, gen, null));
-				lst.remove("Ljava/lang/Object;");
-				if(!lst.isEmpty())
-					out.append(" extends ").append(remapType(String.join(", ", lst)));
-			}
-		}
-	}
-	
 	protected void generateDeclare(StringBuilder out)
 	{
 		out.append("export declare class ").append(model.getSimpleName());
@@ -170,8 +143,8 @@ public class TypeScriptGenerator
 		out.append("export interface ").append(model.getSimpleName());
 		appendClassGenerics(out);
 		appendClassExtensions(out);
-		
 		out.append(" {");
+		
 		boolean needNewLine = false;
 		
 		if(model.isFunctionalInterface())
@@ -230,6 +203,33 @@ public class TypeScriptGenerator
 				return val.toString();
 			}).collect(Collectors.joining(", ")));
 			sb.append(">");
+		}
+	}
+	
+	protected void appendClassExtensions(StringBuilder out)
+	{
+		ClassGeneric generic = model.generic();
+		if(generic != null)
+		{
+			List<SimpleGeneric> gens = new ArrayList<>();
+			gens.add(generic.superClass());
+			gens.addAll(generic.interfaces());
+			if(!gens.isEmpty())
+				addGenericExtends(out, gens, ", ");
+		} else
+		{
+			List<Type> allExtends = new ArrayList<>();
+			Type superType = model.superName();
+			if(superType != null) allExtends.add(superType);
+			allExtends.addAll(model.interfaces());
+			if(!allExtends.isEmpty())
+			{
+				List<String> lst = new ArrayList<>();
+				for(var gen : allExtends) lst.add(mapType(false, gen, null));
+				lst.remove("Ljava/lang/Object;");
+				if(!lst.isEmpty())
+					out.append(" extends ").append(remapType(String.join(", ", lst)));
+			}
 		}
 	}
 	

@@ -1,5 +1,6 @@
 package dev.zeith.tsgen;
 
+import dev.zeith.tsgen.exceptions.TypeScriptGenException;
 import dev.zeith.tsgen.imports.*;
 import dev.zeith.tsgen.parse.*;
 import dev.zeith.tsgen.parse.sig.*;
@@ -7,11 +8,14 @@ import dev.zeith.tsgen.util.TypeUtil;
 import org.objectweb.asm.Type;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.*;
 import java.util.stream.Collectors;
 
 public class TypeScriptGenerator
 {
+	public static Predicate<String> TS_IDENTIFIER = Pattern.compile("^[\\p{L}_$][\\p{L}\\p{N}_$]*$").asMatchPredicate();
+	
 	public static final Map<String, String> TS_ALTS = Map.of(
 			"java/lang/Object", "object",
 			"java/lang/String", "string",
@@ -51,19 +55,26 @@ public class TypeScriptGenerator
 	}
 	
 	public void generate(StringBuilder out, boolean genImports)
+			throws TypeScriptGenException
 	{
 		imports.clear();
 		
 		final int startPos = out.length(); // saved for imports
 		
-		out.append(newline).append(newline);
-		
-		generateDeclare(out);
-		out.append(newline).append(newline);
-		generateInterface(out);
-		
-		if(genImports)
-			out.insert(startPos, generateImports());
+		try
+		{
+			out.append(newline).append(newline);
+			
+			generateDeclare(out);
+			out.append(newline).append(newline);
+			generateInterface(out);
+			
+			if(genImports)
+				out.insert(startPos, generateImports());
+		} catch(Exception e)
+		{
+			throw new TypeScriptGenException(e);
+		}
 	}
 	
 	protected void generateDeclare(StringBuilder out)
@@ -220,6 +231,9 @@ public class TypeScriptGenerator
 	
 	protected void appendField(StringBuilder sb, FieldModel field)
 	{
+		// Skip invalid field names
+		if(!TS_IDENTIFIER.test(field.name())) return;
+		
 		sb.append(field.name())
 		  .append(": ")
 		  .append(mapType(field.type()))
@@ -233,6 +247,9 @@ public class TypeScriptGenerator
 	
 	protected void appendRenamedMethod(StringBuilder sb, MethodModel method, String name)
 	{
+		// Skip invalid method names
+		if(!TS_IDENTIFIER.test(name)) return;
+		
 		sb.append(name);
 		
 		// type args

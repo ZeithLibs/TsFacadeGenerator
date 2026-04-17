@@ -1,5 +1,6 @@
 package dev.zeith.tsgen.parse;
 
+import dev.zeith.tsgen.exceptions.ClassModelParseException;
 import dev.zeith.tsgen.parse.sig.*;
 import dev.zeith.tsgen.util.TypeUtil;
 import lombok.*;
@@ -64,82 +65,90 @@ public record ClassModel(
 	}
 	
 	public static ClassModel parse(byte[] bytecode)
+			throws ClassModelParseException
 	{
 		return parse(new ClassReader(bytecode));
 	}
 	
 	public static ClassModel parse(ClassReader reader)
+			throws ClassModelParseException
 	{
-		ClassNode node = new ClassNode();
-		reader.accept(node, SKIP_CODE | SKIP_DEBUG | SKIP_FRAMES);
-		
-		if((node.access & Opcodes.ACC_PRIVATE) != 0)
-			return null;
-		
-		List<FieldModel> fields = new ArrayList<>();
-		List<MethodModel> methods = new ArrayList<>();
-		List<ConstructorModel> ctors = new ArrayList<>();
-		
-		for(var n : node.fields)
+		try
 		{
-			boolean isPublic = (n.access & Opcodes.ACC_PUBLIC) != 0;
-			if(!isPublic) continue;
+			ClassNode node = new ClassNode();
+			reader.accept(node, SKIP_CODE | SKIP_DEBUG | SKIP_FRAMES);
 			
-			boolean isStatic = (n.access & Opcodes.ACC_STATIC) != 0;
+			if((node.access & Opcodes.ACC_PRIVATE) != 0)
+				return null;
 			
-			fields.add(new FieldModel(
-					isStatic,
-					n.name,
-					NullAwareType.of(EnumNullability.of(n), Type.getType(n.desc), n.signature)
-			));
-		}
-		
-		for(var n : node.methods)
-		{
-			boolean isPublic = (n.access & Opcodes.ACC_PUBLIC) != 0;
-			if(!isPublic) continue;
+			List<FieldModel> fields = new ArrayList<>();
+			List<MethodModel> methods = new ArrayList<>();
+			List<ConstructorModel> ctors = new ArrayList<>();
 			
-			var gen = SimpleGeneric.parseMethodDescSignature(n.signature);
-			
-			List<SimpleGeneric> parametrizedArgs = gen != null ? gen.parameters() : null;
-			Type[] argTypes = Type.getArgumentTypes(n.desc);
-			EnumNullability[] ns = EnumNullability.of(n);
-			NullAwareType[] args = new NullAwareType[ns.length];
-			for(int i = 0; i < argTypes.length; i++)
+			for(var n : node.fields)
 			{
-				ParameterNode pn;
-				var name = n.parameters != null && (pn = n.parameters.get(i)) != null && pn.name != null && !pn.name.isBlank() ? pn.name : "p" + i;
-				args[i] = new NullAwareType(name, ns[i], argTypes[i], parametrizedArgs != null ? parametrizedArgs.get(i) : null);
+				boolean isPublic = (n.access & Opcodes.ACC_PUBLIC) != 0;
+				if(!isPublic) continue;
+				
+				boolean isStatic = (n.access & Opcodes.ACC_STATIC) != 0;
+				
+				fields.add(new FieldModel(
+						isStatic,
+						n.name,
+						NullAwareType.of(EnumNullability.of(n), Type.getType(n.desc), n.signature)
+				));
 			}
 			
-			if(n.name.startsWith("<"))
+			for(var n : node.methods)
 			{
-				if(n.name.equals("<init>")) ctors.add(new ConstructorModel(args));
-				continue;
+				boolean isPublic = (n.access & Opcodes.ACC_PUBLIC) != 0;
+				if(!isPublic) continue;
+				
+				var gen = SimpleGeneric.parseMethodDescSignature(n.signature);
+				
+				List<SimpleGeneric> parametrizedArgs = gen != null ? gen.parameters() : null;
+				Type[] argTypes = Type.getArgumentTypes(n.desc);
+				EnumNullability[] ns = EnumNullability.of(n);
+				NullAwareType[] args = new NullAwareType[ns.length];
+				for(int i = 0; i < argTypes.length; i++)
+				{
+					ParameterNode pn;
+					var name = n.parameters != null && (pn = n.parameters.get(i)) != null && pn.name != null && !pn.name.isBlank() ? pn.name : "p" + i;
+					args[i] = new NullAwareType(name, ns[i], argTypes[i], parametrizedArgs != null ? parametrizedArgs.get(i) : null);
+				}
+				
+				if(n.name.startsWith("<"))
+				{
+					if(n.name.equals("<init>")) ctors.add(new ConstructorModel(args));
+					continue;
+				}
+				
+				methods.add(new MethodModel(
+						n.access,
+						n.name,
+						gen != null ? gen.typeParameters() : null,
+						new NullAwareType("ret", EnumNullability.ofReturnType(n), Type.getReturnType(n.desc), gen != null ? gen.returnType() : null),
+						args
+				));
 			}
 			
-			methods.add(new MethodModel(
-					n.access,
-					n.name,
-					gen != null ? gen.typeParameters() : null,
-					new NullAwareType("ret", EnumNullability.ofReturnType(n), Type.getReturnType(n.desc), gen != null ? gen.returnType() : null),
-					args
-			));
+			ClassGeneric generic = ClassGeneric.parseClassSignature(node.signature);
+			
+			return new ClassModel(
+					generic,
+					Type.getObjectType(node.name),
+					node.superName != null ? Type.getObjectType(node.superName) : null,
+					node.interfaces.stream().map(Type::getObjectType).toList(),
+					node.access,
+					fields,
+					methods,
+					ctors,
+					node.visibleAnnotations,
+					node.invisibleAnnotations
+			);
+		} catch(Exception e)
+		{
+			throw new ClassModelParseException(e);
 		}
-		
-		ClassGeneric generic = ClassGeneric.parseClassSignature(node.signature);
-		
-		return new ClassModel(
-				generic,
-				Type.getObjectType(node.name),
-				node.superName != null ? Type.getObjectType(node.superName) : null,
-				node.interfaces.stream().map(Type::getObjectType).toList(),
-				node.access,
-				fields,
-				methods,
-				ctors,
-				node.visibleAnnotations,
-				node.invisibleAnnotations
-		);
 	}
 }

@@ -12,6 +12,8 @@ public record NullAwareType(
 		SimpleGeneric signature
 )
 {
+	public static final Type JAVA_LANG_OBJECT = Type.getObjectType("java/lang/Object");
+	
 	public Set<Type> getImports()
 	{
 		Set<Type> list = new HashSet<>();
@@ -56,7 +58,19 @@ public record NullAwareType(
 	
 	public static Type findImport(Type type)
 	{
-		if(type.getSort() == Type.ARRAY) return findImport(type.getElementType());
+		if(type.getSort() == Type.ARRAY)
+		{
+			Type elemType = null;
+			try
+			{
+				elemType = type.getElementType();
+			} catch(StringIndexOutOfBoundsException e)
+			{
+				// Kotlin moment......
+				elemType = JAVA_LANG_OBJECT;
+			}
+			return findImport(elemType);
+		}
 		return type.getSort() == Type.OBJECT ? type : null;
 	}
 }

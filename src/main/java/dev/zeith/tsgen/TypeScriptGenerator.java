@@ -147,10 +147,9 @@ public class TypeScriptGenerator
 		
 		boolean needNewLine = false;
 		
-		if(model.isFunctionalInterface())
+		if(model.isInterface())
 		{
 			// find functional method
-			
 			List<MethodModel> fnMethods = model.methods().stream().filter(MethodModel::isFunctionalMethod).toList();
 			if(fnMethods.size() == 1)
 			{
@@ -272,7 +271,7 @@ public class TypeScriptGenerator
 	protected void appendRenamedMethod(String prefix, StringBuilder output, MethodModel method, String name)
 	{
 		// Skip invalid method names
-		if(method.isBridge() || !TS_IDENTIFIER.test(name)) return;
+		if(method.isBridge() || (!name.isEmpty() && !TS_IDENTIFIER.test(name))) return;
 		
 		StringBuilder sb = new StringBuilder();
 		

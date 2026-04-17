@@ -205,7 +205,15 @@ public record SimpleGeneric(Type base, String paramRef, @With int dimensions, Li
 				{
 					// primitive
 					char prim = read();
-					Type base = Type.getType(String.valueOf(prim));
+					Type base;
+					
+					try
+					{
+						base = Type.getType(String.valueOf(prim));
+					} catch(IllegalArgumentException e)
+					{
+						throw new IllegalStateException("Failed to parse: signature < " + sig + " > @ " + i, e);
+					}
 					
 					return new SimpleGeneric(
 							base,

@@ -29,6 +29,7 @@ public class TypeScriptGenerator
 	protected String newline = "\n";
 	protected String indent = "\t";
 	protected IImportModel importModel = RequireImportModel.INSTANCE;
+	protected GeneratorExceptionHandler exceptionHandler = GeneratorExceptionHandler.GLOBAL_FAIL;
 	protected final Set<Type> imports = new HashSet<>();
 	
 	public TypeScriptGenerator(ClassModel model)
@@ -39,6 +40,12 @@ public class TypeScriptGenerator
 	public TypeScriptGenerator withNewline(String newline)
 	{
 		this.newline = Objects.requireNonNull(newline, "newline");
+		return this;
+	}
+	
+	public TypeScriptGenerator withExceptionHandler(GeneratorExceptionHandler exceptionHandler)
+	{
+		this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
 		return this;
 	}
 	
@@ -229,16 +236,27 @@ public class TypeScriptGenerator
 		if(!lst.isEmpty()) sb.append(" extends ").append(remapType(String.join(delim, lst)));
 	}
 	
-	protected void appendField(String prefix, StringBuilder sb, FieldModel field)
+	protected void appendField(String prefix, StringBuilder output, FieldModel field)
 	{
 		// Skip invalid field names
 		if(!TS_IDENTIFIER.test(field.name())) return;
 		
-		if(prefix != null) sb.append(prefix);
-		sb.append(field.name())
-		  .append(": ")
-		  .append(mapType(field.type()))
-		  .append(";");
+		StringBuilder sb = new StringBuilder();
+		
+		try
+		{
+			if(prefix != null) sb.append(prefix);
+			sb.append(field.name())
+			  .append(": ")
+			  .append(mapType(field.type()))
+			  .append(";");
+		} catch(RuntimeException e)
+		{
+			if(handleRuntimeException(e).shouldSkip())
+				return;
+		}
+		
+		output.append(sb);
 	}
 	
 	protected void appendMethod(String prefix, StringBuilder sb, MethodModel method)
@@ -246,36 +264,54 @@ public class TypeScriptGenerator
 		appendRenamedMethod(prefix, sb, method, method.name());
 	}
 	
-	protected void appendRenamedMethod(String prefix, StringBuilder sb, MethodModel method, String name)
+	protected void appendRenamedMethod(String prefix, StringBuilder output, MethodModel method, String name)
 	{
 		// Skip invalid method names
 		if(method.isBridge() || !TS_IDENTIFIER.test(name)) return;
 		
-		if(prefix != null) sb.append(prefix);
-		sb.append(name);
+		StringBuilder sb = new StringBuilder();
 		
-		// type args
-		var pars = method.typeParameters();
-		if(pars != null && !pars.isEmpty())
+		try
 		{
-			sb.append("<");
-			sb.append(pars.stream().map(t ->
+			if(prefix != null) sb.append(prefix);
+			sb.append(name);
+			
+			// type args
+			var pars = method.typeParameters();
+			if(pars != null && !pars.isEmpty())
 			{
-				StringBuilder val = new StringBuilder(t.name());
-				List<SimpleGeneric> gens = new ArrayList<>();
-				gens.addAll(t.classBounds());
-				gens.addAll(t.interfaceBounds());
-				addGenericExtends(val, gens, " & ");
-				return val.toString();
-			}).collect(Collectors.joining(", ")));
-			sb.append(">");
+				sb.append("<");
+				sb.append(pars.stream().map(t ->
+				{
+					StringBuilder val = new StringBuilder(t.name());
+					List<SimpleGeneric> gens = new ArrayList<>();
+					gens.addAll(t.classBounds());
+					gens.addAll(t.interfaceBounds());
+					addGenericExtends(val, gens, " & ");
+					return val.toString();
+				}).collect(Collectors.joining(", ")));
+				sb.append(">");
+			}
+			
+			sb.append("(")
+			  .append(Arrays.stream(method.args()).map(a -> a.name() + ": " + mapType(a)).collect(Collectors.joining(", ")))
+			  .append("): ")
+			  .append(mapType(method.returnType()))
+			  .append(";");
+		} catch(RuntimeException e)
+		{
+			if(handleRuntimeException(e).shouldSkip())
+				return;
 		}
 		
-		sb.append("(")
-		  .append(Arrays.stream(method.args()).map(a -> a.name() + ": " + mapType(a)).collect(Collectors.joining(", ")))
-		  .append("): ")
-		  .append(mapType(method.returnType()))
-		  .append(";");
+		output.append(sb);
+	}
+	
+	protected GeneratorExceptionHandler handleRuntimeException(RuntimeException ex)
+	{
+		if(exceptionHandler == GeneratorExceptionHandler.GLOBAL_FAIL)
+			throw ex;
+		return exceptionHandler;
 	}
 	
 	public String generateImports()

@@ -1,6 +1,7 @@
-package dev.zeith.tsgen.parse;
+package dev.zeith.tsgen.parse.model;
 
 import dev.zeith.tsgen.exceptions.ClassModelParseException;
+import dev.zeith.tsgen.parse.*;
 import dev.zeith.tsgen.parse.sig.*;
 import dev.zeith.tsgen.util.TypeUtil;
 import lombok.*;
@@ -119,7 +120,7 @@ public record ClassModel(
 				
 				if(n.name.startsWith("<"))
 				{
-					if(n.name.equals("<init>")) ctors.add(new ConstructorModel(args));
+					if(n.name.equals("<init>")) ctors.add(new ConstructorModel(n.access, args));
 					continue;
 				}
 				

@@ -1,5 +1,6 @@
-package dev.zeith.tsgen.parse;
+package dev.zeith.tsgen.parse.model;
 
+import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.sig.TypeParameter;
 import org.objectweb.asm.Opcodes;
 
@@ -13,6 +14,11 @@ public record MethodModel(
 		NullAwareType[] args
 )
 {
+	public boolean isPublic()
+	{
+		return (access & Opcodes.ACC_PUBLIC) != 0;
+	}
+	
 	public boolean isStatic()
 	{
 		return (access & Opcodes.ACC_STATIC) != 0;

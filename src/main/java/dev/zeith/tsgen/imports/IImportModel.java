@@ -26,16 +26,20 @@ public interface IImportModel
 		
 		try(in)
 		{
+			int blankLineCounter = 0;
 			var itr = in.iterator();
 			while(itr.hasNext())
 			{
 				String ln = itr.next();
 				
+				if(ln.isBlank()) blankLineCounter++;
+				else blankLineCounter = 0;
+				
 				importHandler:
 				if(isImports)
 				{
 					imports.append(ln).append(newline);
-					if(ln.startsWith("export"))
+					if(blankLineCounter > 1)
 					{
 						isImports = false;
 						break importHandler;

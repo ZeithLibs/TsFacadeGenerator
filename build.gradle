@@ -10,9 +10,11 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains:annotations:$jbAnnotation")
+    implementation("com.github.javaparser:javaparser-symbol-solver-core:$javaparser")
     implementation("org.ow2.asm:asm:$owasm")
     implementation("org.ow2.asm:asm-tree:$owasm")
+    implementation("org.jetbrains:annotations:$jbAnnotation")
+
     compileOnly "org.projectlombok:lombok:$lombok"
     annotationProcessor "org.projectlombok:lombok:$lombok"
     testCompileOnly "org.projectlombok:lombok:$lombok"

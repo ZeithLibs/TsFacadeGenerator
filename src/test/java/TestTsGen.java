@@ -1,5 +1,6 @@
 import dev.zeith.tsgen.*;
 import dev.zeith.tsgen.parse.*;
+import dev.zeith.tsgen.parse.model.ClassModel;
 
 import java.io.*;
 import java.nio.file.Files;

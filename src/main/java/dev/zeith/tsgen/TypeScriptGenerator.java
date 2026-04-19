@@ -3,8 +3,11 @@ package dev.zeith.tsgen;
 import dev.zeith.tsgen.exceptions.TypeScriptGenException;
 import dev.zeith.tsgen.imports.*;
 import dev.zeith.tsgen.parse.*;
+import dev.zeith.tsgen.parse.model.*;
 import dev.zeith.tsgen.parse.sig.*;
+import dev.zeith.tsgen.parse.src.model.*;
 import dev.zeith.tsgen.util.TypeUtil;
+import org.jetbrains.annotations.*;
 import org.objectweb.asm.Type;
 
 import java.util.*;
@@ -14,27 +17,33 @@ import java.util.stream.Collectors;
 
 public class TypeScriptGenerator
 {
+	// Predicate for matching field/method names.
 	public static Predicate<String> TS_IDENTIFIER = Pattern.compile("^[\\p{L}_$][\\p{L}\\p{N}_$]*$").asMatchPredicate();
 	
+	/**
+	 * Alternative TS-friendly names
+	 */
 	public static final Map<String, String> TS_ALTS = Map.of(
 			"java/lang/Object", "object",
 			"java/lang/String", "string",
-			"java/lang/Void", "void",
-			"java/util/Map", "Map",
-			"java/util/Set", "Set"
+			"java/lang/Void", "void"
+//			"java/util/Map", "Map",
+//			"java/util/Set", "Set"
 	);
 	
 	protected final ClassModel model;
+	protected final @Nullable SourceClassModel sourceModel;
 	
-	protected String newline = "\n";
-	protected String indent = "\t";
-	protected IImportModel importModel = RequireImportModel.INSTANCE;
-	protected GeneratorExceptionHandler exceptionHandler = GeneratorExceptionHandler.GLOBAL_FAIL;
-	protected final Set<Type> imports = new HashSet<>();
+	public String newline = "\n";
+	public String indent = "\t";
+	public IImportModel importModel = RequireImportModel.INSTANCE;
+	public GeneratorExceptionHandler exceptionHandler = GeneratorExceptionHandler.GLOBAL_FAIL;
+	public final Set<Type> imports = new HashSet<>();
 	
-	public TypeScriptGenerator(ClassModel model)
+	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel)
 	{
 		this.model = model;
+		this.sourceModel = sourceModel;
 	}
 	
 	public TypeScriptGenerator withNewline(String newline)
@@ -70,23 +79,40 @@ public class TypeScriptGenerator
 		
 		try
 		{
-			out.append(newline).append(newline);
+			out.append(newline);
 			
 			generateDeclare(out);
 			out.append(newline).append(newline);
 			generateInterface(out);
 			
 			if(genImports)
+			{
+				out.insert(startPos, newline.repeat(2));
 				out.insert(startPos, generateImports());
+			}
 		} catch(Exception e)
 		{
 			throw new TypeScriptGenException(e);
 		}
 	}
 	
+	protected void appendComment(StringBuilder out, int spacingAbove, int indent, @Nullable String commentBlock)
+	{
+		if(commentBlock == null) return;
+		String indentedNL = newline + this.indent.repeat(indent);
+		out.append(indentedNL.repeat(spacingAbove))
+		   .append(commentBlock
+				   .lines()
+				   .map(String::trim)
+				   .map(s -> s.startsWith("*") ? " " + s : s)
+				   .collect(Collectors.joining(indentedNL))
+		   );
+	}
+	
 	protected void generateDeclare(StringBuilder out)
 	{
-		out.append("export declare class ").append(model.getSimpleName());
+		if(sourceModel != null) appendComment(out, 0, 0, sourceModel.commentBlock());
+		out.append(newline).append("export declare class ").append(model.getSimpleName());
 		appendClassGenerics(out);
 		appendClassExtensions(out);
 		out.append(" {");
@@ -95,15 +121,35 @@ public class TypeScriptGenerator
 		
 		for(ConstructorModel ctor : model.constructors())
 		{
+			List<String> parameterNames = null;
+			if(sourceModel != null)
+			{
+				SourceConstructorModel scm = sourceModel.findSourceMethod(ctor);
+				if(scm != null)
+				{
+					appendComment(out, 1, 1, scm.commentBlock());
+					parameterNames = scm.parameters().stream().map(SourceMethodParamModel::name).toList();
+				}
+			}
+			
 			needNewLine = true;
 			out.append(newline).append(indent)
-			   .append("constructor(")
-			   .append(Arrays
-					   .stream(ctor.args())
-					   .map(t -> t.name() + ": " + mapType(t))
-					   .collect(Collectors.joining(", "))
-			   )
-			   .append(");");
+			   .append("constructor(");
+			
+			if(parameterNames != null)
+			{
+				List<String> pnames = new ArrayList<>();
+				var args = ctor.args();
+				for(int i = 0; i < args.length; i++)
+				{
+					NullAwareType a = args[i];
+					pnames.add(parameterNames.get(i) + ": " + mapType(a));
+				}
+				out.append(String.join(", ", pnames));
+			} else
+				out.append(Arrays.stream(ctor.args()).map(t -> t.name() + ": " + mapType(t)).collect(Collectors.joining(", ")));
+			
+			out.append(");");
 		}
 		if(needNewLine)
 		{
@@ -247,6 +293,12 @@ public class TypeScriptGenerator
 		
 		StringBuilder sb = new StringBuilder();
 		
+		if(sourceModel != null)
+		{
+			SourceFieldModel sfm = sourceModel.findSourceField(field);
+			if(sfm != null) appendComment(sb, 1, 1, sfm.commentBlock());
+		}
+		
 		try
 		{
 			if(prefix != null) sb.append(prefix);
@@ -275,12 +327,23 @@ public class TypeScriptGenerator
 		
 		StringBuilder sb = new StringBuilder();
 		
+		List<String> parameterNames = null;
+		if(sourceModel != null)
+		{
+			SourceMethodModel smm = sourceModel.findSourceMethod(method);
+			if(smm != null)
+			{
+				appendComment(sb, 1, 1, smm.commentBlock());
+				parameterNames = smm.parameters().stream().map(SourceMethodParamModel::name).toList();
+			}
+		}
+		
 		try
 		{
 			if(prefix != null) sb.append(prefix);
 			sb.append(name);
 			
-			// type args
+			// returnType args
 			var pars = method.typeParameters();
 			if(pars != null && !pars.isEmpty())
 			{
@@ -297,11 +360,22 @@ public class TypeScriptGenerator
 				sb.append(">");
 			}
 			
-			sb.append("(")
-			  .append(Arrays.stream(method.args()).map(a -> a.name() + ": " + mapType(a)).collect(Collectors.joining(", ")))
-			  .append("): ")
-			  .append(mapType(method.returnType()))
-			  .append(";");
+			sb.append("(");
+			
+			if(parameterNames != null)
+			{
+				List<String> pnames = new ArrayList<>();
+				var args = method.args();
+				for(int i = 0; i < args.length; i++)
+				{
+					NullAwareType a = args[i];
+					pnames.add(parameterNames.get(i) + ": " + mapType(a));
+				}
+				sb.append(String.join(", ", pnames));
+			} else
+				sb.append(Arrays.stream(method.args()).map(a -> a.name() + ": " + mapType(a)).collect(Collectors.joining(", ")));
+			
+			sb.append("): ").append(mapType(method.returnType())).append(";");
 		} catch(RuntimeException e)
 		{
 			if(handleRuntimeException(e).shouldSkip())

@@ -1,8 +1,10 @@
 package dev.zeith.tsgen;
 
 import dev.zeith.tsgen.imports.*;
-import dev.zeith.tsgen.parse.ClassModel;
+import dev.zeith.tsgen.parse.model.ClassModel;
+import dev.zeith.tsgen.parse.src.model.SourceClassModel;
 import lombok.*;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Type;
 
 import java.io.*;
@@ -42,13 +44,19 @@ public class BulkTypeScriptExporter
 	public File export(ClassModel model)
 			throws IOException
 	{
+		return export(model, null);
+	}
+	
+	public File export(ClassModel model, @Nullable SourceClassModel sourceModel)
+			throws IOException
+	{
 		File dst = new File(outDir, getFilePathOf(model.name())).getAbsoluteFile();
 		toOptimize.add(dst);
 		
 		// Create parent directory
 		dst.toPath().getParent().toFile().mkdirs();
 		
-		TypeScriptGenerator gen = new TypeScriptGenerator(model).withImportModel(this.importModel);
+		TypeScriptGenerator gen = new TypeScriptGenerator(model, sourceModel).withImportModel(this.importModel);
 		StringBuilder sb = new StringBuilder();
 		configurator.accept(gen);
 		

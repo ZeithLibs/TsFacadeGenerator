@@ -91,11 +91,24 @@ public class BulkTypeScriptExporter
 			optimize(file, importModel);
 	}
 	
+	public void optimize(String prefix, String suffix)
+			throws IOException
+	{
+		for(File file : toOptimize)
+			optimize(file, importModel, prefix, suffix);
+	}
+	
 	public static void optimize(File file, IImportModel importModel)
 			throws IOException
 	{
+		optimize(file, importModel, "", "");
+	}
+	
+	public static void optimize(File file, IImportModel importModel, String prefix, String suffix)
+			throws IOException
+	{
 		String optimized = importModel.reduceImports(file.getName(), Files.lines(file.toPath()));
-		if(optimized != null) Files.writeString(file.toPath(), optimized, StandardCharsets.UTF_8);
+		Files.writeString(file.toPath(), prefix + optimized + suffix, StandardCharsets.UTF_8);
 	}
 	
 	public void reset()

@@ -1,6 +1,6 @@
 package dev.zeith.tsgen.imports;
 
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.Type;
 
 import java.util.*;
@@ -18,7 +18,7 @@ public interface IImportModel
 	
 	boolean isImport(String line);
 	
-	@Nullable
+	@NotNull
 	default String reduceImports(String filename, Stream<String> in)
 	{
 		String newline = "\n";
@@ -51,9 +51,6 @@ public interface IImportModel
 		
 		String oldImps = imports.toString();
 		String imps = reduceImports(filename, newline, oldImps) + newline;
-		
-		if(oldImps.equals(imps))
-			return null;
 		
 		return imps + newline + types;
 	}

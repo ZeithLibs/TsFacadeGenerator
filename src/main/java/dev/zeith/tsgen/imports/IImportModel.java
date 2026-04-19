@@ -16,6 +16,8 @@ public interface IImportModel
 	
 	String reduceImports(String filename, String newline, String importLines);
 	
+	boolean isImport(String line);
+	
 	@Nullable
 	default String reduceImports(String filename, Stream<String> in)
 	{
@@ -26,20 +28,16 @@ public interface IImportModel
 		
 		try(in)
 		{
-			int blankLineCounter = 0;
 			var itr = in.iterator();
 			while(itr.hasNext())
 			{
 				String ln = itr.next();
 				
-				if(ln.isBlank()) blankLineCounter++;
-				else blankLineCounter = 0;
-				
 				importHandler:
 				if(isImports)
 				{
 					imports.append(ln).append(newline);
-					if(blankLineCounter > 1)
+					if(!ln.isBlank() && !isImport(ln))
 					{
 						isImports = false;
 						break importHandler;

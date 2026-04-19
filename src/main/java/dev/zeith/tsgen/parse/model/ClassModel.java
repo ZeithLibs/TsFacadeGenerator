@@ -115,7 +115,7 @@ public record ClassModel(
 				{
 					ParameterNode pn;
 					var name = n.parameters != null && (pn = n.parameters.get(i)) != null && pn.name != null && !pn.name.isBlank() ? pn.name : "p" + i;
-					args[i] = new NullAwareType(name, ns[i], argTypes[i], parametrizedArgs != null ? parametrizedArgs.get(i) : null);
+					args[i] = new NullAwareType(name, ns[i], argTypes[i], parametrizedArgs != null && i < parametrizedArgs.size() ? parametrizedArgs.get(i) : null);
 				}
 				
 				if(n.name.startsWith("<"))

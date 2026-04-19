@@ -3,12 +3,17 @@ package dev.zeith.tsgen.imports;
 import dev.zeith.tsgen.util.StringQuoter;
 
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.*;
 
 public class RequireImportModel
 		extends BaseImportModel
 {
 	public static final RequireImportModel INSTANCE = new RequireImportModel();
+	
+	public static final Pattern REGEX = Pattern.compile("const\\s*\\{(?<objects>\\s*[^}]+)}\\s*=\\s*require\\s*\\(\\s*['\"](?<path>.+)['\"]\\s*\\)\\s*;?");
+	public static final Predicate<String> FILTER = REGEX.asMatchPredicate();
 	
 	@Override
 	public BaseImportModel cloneInstance()
@@ -49,5 +54,11 @@ public class RequireImportModel
 		}
 		
 		return grouped;
+	}
+	
+	@Override
+	public boolean isImport(String line)
+	{
+		return FILTER.test(line);
 	}
 }

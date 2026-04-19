@@ -28,10 +28,27 @@ interface ISourceVisitor
 	static ISourceVisitor open(File path)
 			throws IOException
 	{
-		if(path == null) return null;
+		if(path == null) return new EmptyVisitor();
 		return path.isDirectory()
 			   ? new DirVisitor(path.toPath())
 			   : new ZipVisitor(new ZipFile(path));
+	}
+	
+	record EmptyVisitor()
+			implements ISourceVisitor
+	{
+		
+		@Override
+		public String readSource(String fullPath)
+				throws IOException
+		{
+			throw new FileNotFoundException(fullPath);
+		}
+		
+		@Override
+		public void close()
+		{
+		}
 	}
 	
 	record ZipVisitor(ZipFile file)

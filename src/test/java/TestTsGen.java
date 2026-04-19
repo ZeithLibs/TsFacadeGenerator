@@ -1,10 +1,12 @@
 import dev.zeith.tsgen.*;
-import dev.zeith.tsgen.parse.*;
+import dev.zeith.tsgen.parse.IClassFileVisitor;
 import dev.zeith.tsgen.parse.model.ClassModel;
+import dev.zeith.tsgen.parse.src.model.SourceClassModel;
+import dev.zeith.tsgen.parse.src.parse.ISourceParserFactory;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.util.Comparator;
+import java.nio.file.*;
+import java.util.*;
 
 public class TestTsGen
 {
@@ -18,7 +20,7 @@ public class TestTsGen
 		// Clean directory before dumping ts
 		deleteDir(targetDir);
 		
-		File input = new File("build/classes/java");
+		File input = new File("build/classes/java/main");
 		
 		BulkTypeScriptExporter exporter = BulkTypeScriptExporter
 				.builder()
@@ -27,8 +29,10 @@ public class TestTsGen
 				.pathResolver(IPathResolver.FROM_CLASS_NAME)
 				.build();
 		
+		var srcParser = ISourceParserFactory.BLEEDING_EDGE.createParser();
+		
 		// Check every file/entry in dir/jar
-		IClassFileVisitor.visit(input, (name, entry) ->
+		IClassFileVisitor.visit(input, Path.of("src/main/java").toFile(), (name, entry, src) ->
 				{
 					byte[] bytecode = entry.readAllBytes();
 					ClassModel model = ClassModel.parse(bytecode);
@@ -38,7 +42,9 @@ public class TestTsGen
 						return;
 					}
 					
-					exporter.export(model);
+					Map<String, SourceClassModel> classes = src.map(code -> SourceClassModel.parse(srcParser, code)).orElse(Map.of());
+					
+					exporter.export(model, classes.get(model.getSimpleName()));
 				}
 		);
 		

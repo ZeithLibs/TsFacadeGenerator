@@ -76,18 +76,14 @@ public record SourceClassModel(
 		
 		Map<String, SourceClassModel> result = new HashMap<>();
 		for(TypeDeclaration<?> unit : units)
-		{
-			var s = parseSingle(ctx, unit);
-			if(s != null) result.put(unit.getNameAsString(), s);
-		}
+			parseType(unit.getFullyQualifiedName().orElse(null), unit.getNameAsString(), ctx, unit, result);
 		
 		return result;
 	}
 	
-	private static SourceClassModel parseSingle(ParseContext ctx, TypeDeclaration<?> type)
+	private static void parseType(String fqn, String simpleName, ParseContext ctx, TypeDeclaration<?> type, Map<String, SourceClassModel> result)
 	{
-		String fqn = type.getFullyQualifiedName().orElse(null);
-		if(fqn == null) return null;
+		if(fqn == null) return;
 		
 		List<SourceConstructorModel> constructors = new ArrayList<>();
 		List<SourceFieldModel> fields = new ArrayList<>();
@@ -104,15 +100,19 @@ public record SourceClassModel(
 			} else if(member instanceof ConstructorDeclaration cd)
 			{
 				constructors.add(SourceConstructorModel.parse(ctx, cd));
+			} else if(member instanceof TypeDeclaration<?> td)
+			{
+				parseType(fqn + "$" + td.getNameAsString(), simpleName + "$" + td.getNameAsString(), ctx, td, result);
 			}
 		}
 		
-		return new SourceClassModel(
-				ctx.parseComment(type),
-				fqn,
-				constructors,
-				fields,
-				methods
+		result.put(simpleName, new SourceClassModel(
+						ctx.parseComment(type),
+						fqn,
+						constructors,
+						fields,
+						methods
+				)
 		);
 	}
 }

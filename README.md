@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation("dev.zeith.libs:TsFacadeGenerator:1.0.4")
+    implementation("dev.zeith.libs:TsFacadeGenerator:1.1.0")
 }
 ```
 
@@ -48,7 +48,7 @@ BulkTypeScriptExporter exporter = BulkTypeScriptExporter
     .build();
 
 // Check every file/entry in dir/jar
-IClassFileVisitor.visit(input, (name, entry) ->
+IClassFileVisitor.visit(input, null, (name, entry, src) ->
 {
     byte[] bytecode = entry.readAllBytes();
     ClassModel model = ClassModel.parse(bytecode);

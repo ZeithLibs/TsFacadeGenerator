@@ -7,27 +7,27 @@ import java.util.zip.ZipFile;
 
 public interface IClassFileVisitor<X extends Exception>
 {
-	void visit(String path, InputStream input)
+	void visit(String path, InputStream input, Optional<String> sourceCode)
 			throws IOException, X;
 	
-	static <X extends Exception> void visit(File jarOrDir, IClassFileVisitor<X> visitor)
+	static <X extends Exception> void visit(File jarOrDir, File sourceJarOrDir, IClassFileVisitor<X> visitor)
 			throws IOException, X
 	{
 		if(!jarOrDir.exists()) return;
-		if(jarOrDir.isDirectory()) visitDir(jarOrDir, visitor);
+		if(jarOrDir.isDirectory()) visitDir(jarOrDir, sourceJarOrDir, visitor);
 		else if(jarOrDir.isFile())
 		{
 			String name = jarOrDir.getName().toLowerCase(Locale.ROOT);
 			if(name.endsWith(".jar") || name.endsWith(".zip"))
-				visitZipFile(jarOrDir, visitor);
+				visitZipFile(jarOrDir, sourceJarOrDir, visitor);
 		}
 	}
 	
-	private static <X extends Exception> void visitDir(File dir, IClassFileVisitor<X> visitor)
+	private static <X extends Exception> void visitDir(File dir, File sourceJarOrDir, IClassFileVisitor<X> visitor)
 			throws IOException, X
 	{
 		var root = dir.toPath();
-		try(var str = Files.walk(root))
+		try(var str = Files.walk(root); var src = ISourceVisitor.open(sourceJarOrDir))
 		{
 			Iterator<Path> itr = str.filter(p -> p.toString().toLowerCase(Locale.ROOT).endsWith(".class")).iterator();
 			while(itr.hasNext())
@@ -35,16 +35,24 @@ public interface IClassFileVisitor<X extends Exception>
 				var pth = itr.next();
 				try(InputStream in = Files.newInputStream(pth))
 				{
-					visitor.visit(root.relativize(pth).toString().replace(File.separatorChar, '/'), in);
+					String name = root.relativize(pth).toString().replace(File.separatorChar, '/');
+					
+					String sourceFilePath = name.substring(0, name.length() - 6);
+					int filename = sourceFilePath.lastIndexOf('/') + 1;
+					int subclass = sourceFilePath.indexOf('$', filename);
+					if(subclass != -1)
+						sourceFilePath = sourceFilePath.substring(0, subclass);
+					
+					visitor.visit(name, in, src.tryReadSource(sourceFilePath + ".java"));
 				}
 			}
 		}
 	}
 	
-	private static <X extends Exception> void visitZipFile(File jarFile, IClassFileVisitor<X> visitor)
+	private static <X extends Exception> void visitZipFile(File jarFile, File sourceJarOrDir, IClassFileVisitor<X> visitor)
 			throws IOException, X
 	{
-		try(ZipFile zf = new ZipFile(jarFile))
+		try(ZipFile zf = new ZipFile(jarFile); var src = ISourceVisitor.open(sourceJarOrDir))
 		{
 			var entries = zf.entries();
 			while(entries.hasMoreElements())
@@ -54,10 +62,19 @@ public interface IClassFileVisitor<X extends Exception>
 				{
 					try(InputStream in = zf.getInputStream(entry))
 					{
-						visitor.visit(entry.getName(), in);
+						String name = entry.getName();
+						
+						String sourceFilePath = name.substring(0, name.length() - 6);
+						int filename = sourceFilePath.lastIndexOf('/') + 1;
+						int subclass = sourceFilePath.indexOf('$', filename);
+						if(subclass != -1)
+							sourceFilePath = sourceFilePath.substring(0, subclass);
+						
+						visitor.visit(name, in, src.tryReadSource(sourceFilePath + ".java"));
 					}
 				}
 			}
 		}
 	}
+	
 }

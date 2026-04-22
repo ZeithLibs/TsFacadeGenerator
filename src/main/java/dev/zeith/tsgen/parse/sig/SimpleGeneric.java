@@ -43,8 +43,8 @@ public record SimpleGeneric(Type base, String paramRef, @With int dimensions, Li
 	
 	public String getTsSimpleName()
 	{
-		if(wildcard == WildcardKind.SUPER)
-			return "unknown"; // safest fallback
+//		if(wildcard == WildcardKind.SUPER)
+//			return "unknown"; // safest fallback
 		
 		if(wildcard == WildcardKind.ANY)
 			return "any";

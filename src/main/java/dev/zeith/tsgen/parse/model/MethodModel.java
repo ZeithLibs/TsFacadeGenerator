@@ -2,7 +2,7 @@ package dev.zeith.tsgen.parse.model;
 
 import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.sig.TypeParameter;
-import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.*;
 
 import java.util.List;
 
@@ -14,6 +14,11 @@ public record MethodModel(
 		NullAwareType[] args
 )
 {
+	public boolean isLastVararg()
+	{
+		return (access & Opcodes.ACC_VARARGS) != 0 && args.length > 0 && args[args.length - 1].type().getSort() == Type.ARRAY;
+	}
+	
 	public boolean isPublic()
 	{
 		return (access & Opcodes.ACC_PUBLIC) != 0;

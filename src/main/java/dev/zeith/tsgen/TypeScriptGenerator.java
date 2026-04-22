@@ -379,18 +379,16 @@ public class TypeScriptGenerator
 			
 			sb.append("(");
 			
-			if(parameterNames != null)
+			List<String> pnames = new ArrayList<>();
+			var args = method.args();
+			for(int i = 0; i < args.length; i++)
 			{
-				List<String> pnames = new ArrayList<>();
-				var args = method.args();
-				for(int i = 0; i < args.length; i++)
-				{
-					NullAwareType a = args[i];
-					pnames.add(parameterNames.get(i) + ": " + mapType(a));
-				}
-				sb.append(String.join(", ", pnames));
-			} else
-				sb.append(Arrays.stream(method.args()).map(a -> a.name() + ": " + mapType(a)).collect(Collectors.joining(", ")));
+				NullAwareType a = args[i];
+				String pref = "";
+				if(i == args.length - 1 && method.isLastVararg()) pref = "...";
+				pnames.add(pref + (parameterNames != null && a.decodedName() == null ? parameterNames.get(i) : a.name()) + ": " + mapType(a));
+			}
+			sb.append(String.join(", ", pnames));
 			
 			sb.append("): ").append(mapType(method.returnType())).append(";");
 		} catch(RuntimeException e)

@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation("dev.zeith.libs:TsFacadeGenerator:1.1.8")
+    implementation("dev.zeith.libs:TsFacadeGenerator:1.1.9")
 }
 ```
 

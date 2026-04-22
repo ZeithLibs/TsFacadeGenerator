@@ -77,7 +77,7 @@ public record ClassModel(
 		try
 		{
 			ClassNode node = new ClassNode();
-			reader.accept(node, SKIP_CODE | SKIP_DEBUG | SKIP_FRAMES);
+			reader.accept(node, SKIP_CODE | SKIP_FRAMES);
 			
 			if((node.access & Opcodes.ACC_PRIVATE) != 0)
 				return null;
@@ -85,6 +85,8 @@ public record ClassModel(
 			List<FieldModel> fields = new ArrayList<>();
 			List<MethodModel> methods = new ArrayList<>();
 			List<ConstructorModel> ctors = new ArrayList<>();
+			
+			boolean isEnum = Objects.equals("java/lang/Enum", node.superName);
 			
 			for(var n : node.fields)
 			{
@@ -96,26 +98,53 @@ public record ClassModel(
 				fields.add(new FieldModel(
 						isStatic,
 						n.name,
-						NullAwareType.of(EnumNullability.of(n), Type.getType(n.desc), n.signature)
+						NullAwareType.of(-1, EnumNullability.of(n), Type.getType(n.desc), n.signature)
 				));
 			}
 			
 			for(var n : node.methods)
 			{
-				boolean isPublic = (n.access & Opcodes.ACC_PUBLIC) != 0;
-				if(!isPublic) continue;
+				if((n.access & Opcodes.ACC_PUBLIC) == 0) continue;
 				
 				var gen = SimpleGeneric.parseMethodDescSignature(n.signature);
 				
-				List<SimpleGeneric> parametrizedArgs = gen != null ? gen.parameters() : null;
 				Type[] argTypes = Type.getArgumentTypes(n.desc);
+				List<ParameterNode> params = n.parameters;
+				
+				boolean isEnumValueOf = isEnum && n.name.equals("valueOf") && argTypes.length == 1 && (n.access & Opcodes.ACC_PUBLIC) != 0 && (n.access & Opcodes.ACC_STATIC) != 0;
+				
+				List<SimpleGeneric> parametrizedArgs = gen != null ? gen.parameters() : null;
 				EnumNullability[] ns = EnumNullability.of(n);
 				NullAwareType[] args = new NullAwareType[ns.length];
 				for(int i = 0; i < argTypes.length; i++)
 				{
-					ParameterNode pn;
-					var name = n.parameters != null && (pn = n.parameters.get(i)) != null && pn.name != null && !pn.name.isBlank() ? pn.name : "p" + i;
-					args[i] = new NullAwareType(name, ns[i], argTypes[i], parametrizedArgs != null && i < parametrizedArgs.size() ? parametrizedArgs.get(i) : null);
+					String paramName = null;
+					
+					// ASM 9+: parameters list is populated if SKIP_DEBUG was NOT used
+					if(params != null && i < params.size())
+						paramName = params.get(i).name;
+					else // ASM 8 fallback: extract from localVariables by index
+						if(n.localVariables != null)
+							for(LocalVariableNode lv : n.localVariables)
+								if(lv.index == i && lv.name != null)
+								{
+									paramName = lv.name;
+									break;
+								}
+					
+					// Fallbacks
+					if(paramName == null || paramName.isBlank())
+					{
+						paramName = isEnumValueOf ? "name" : null;
+					}
+					
+					args[i] = new NullAwareType(
+							i,
+							paramName,
+							ns[i],
+							argTypes[i],
+							parametrizedArgs != null && i < parametrizedArgs.size() ? parametrizedArgs.get(i) : null
+					);
 				}
 				
 				if(n.name.startsWith("<"))
@@ -128,7 +157,7 @@ public record ClassModel(
 						n.access,
 						n.name,
 						gen != null ? gen.typeParameters() : null,
-						new NullAwareType("ret", EnumNullability.ofReturnType(n), Type.getReturnType(n.desc), gen != null ? gen.returnType() : null),
+						new NullAwareType(-1, "ret", EnumNullability.ofReturnType(n), Type.getReturnType(n.desc), gen != null ? gen.returnType() : null),
 						args
 				));
 			}

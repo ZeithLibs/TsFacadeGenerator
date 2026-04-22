@@ -2,7 +2,7 @@ package dev.zeith.tsgen;
 
 import dev.zeith.tsgen.exceptions.TypeScriptGenException;
 import dev.zeith.tsgen.imports.*;
-import dev.zeith.tsgen.parse.*;
+import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.model.*;
 import dev.zeith.tsgen.parse.sig.*;
 import dev.zeith.tsgen.parse.src.model.*;
@@ -114,7 +114,7 @@ public class TypeScriptGenerator
 		if(sourceModel != null) appendComment(out, 0, 0, sourceModel.commentBlock());
 		out.append(newline).append("export declare class ").append(model.getSimpleName());
 		appendClassGenerics(out);
-		appendClassExtensions(out);
+		appendClassExtensions(out, false);
 		out.append(" {");
 		
 		boolean needNewLine = false;
@@ -188,7 +188,7 @@ public class TypeScriptGenerator
 	{
 		out.append("export interface ").append(model.getSimpleName());
 		appendClassGenerics(out);
-		appendClassExtensions(out);
+		appendClassExtensions(out, true);
 		out.append(" {");
 		
 		boolean needNewLine = false;
@@ -251,7 +251,7 @@ public class TypeScriptGenerator
 		}
 	}
 	
-	protected void appendClassExtensions(StringBuilder out)
+	protected void appendClassExtensions(StringBuilder out, boolean pickFirst)
 	{
 		ClassGeneric generic = model.generic();
 		if(generic != null)
@@ -259,6 +259,15 @@ public class TypeScriptGenerator
 			List<SimpleGeneric> gens = new ArrayList<>();
 			gens.add(generic.superClass());
 			gens.addAll(generic.interfaces());
+			gens.removeIf(Objects::isNull);
+			
+			if(pickFirst && gens.size() > 1)
+			{
+				var f = gens.get(0);
+				gens.clear();
+				gens.add(f);
+			}
+			
 			if(!gens.isEmpty())
 				addGenericExtends(out, gens, ", ");
 		} else
@@ -269,11 +278,19 @@ public class TypeScriptGenerator
 			allExtends.addAll(model.interfaces());
 			if(!allExtends.isEmpty())
 			{
-				List<String> lst = new ArrayList<>();
-				for(var gen : allExtends) lst.add(mapType(false, gen, null));
-				lst.remove("Ljava/lang/Object;");
-				if(!lst.isEmpty())
-					out.append(" extends ").append(remapType(String.join(", ", lst)));
+				List<String> gens = new ArrayList<>();
+				for(var gen : allExtends) gens.add(mapType(false, gen, null));
+				gens.remove("Ljava/lang/Object;");
+				
+				if(pickFirst && gens.size() > 1)
+				{
+					var f = gens.get(0);
+					gens.clear();
+					gens.add(f);
+				}
+				
+				if(!gens.isEmpty())
+					out.append(" extends ").append(remapType(String.join(", ", gens)));
 			}
 		}
 	}

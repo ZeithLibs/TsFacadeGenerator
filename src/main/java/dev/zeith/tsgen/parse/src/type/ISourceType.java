@@ -1,5 +1,6 @@
 package dev.zeith.tsgen.parse.src.type;
 
+import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.src.parse.ParseContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,5 +17,5 @@ public interface ISourceType
 	
 	Set<String> getPotentialInternalNames();
 	
-	boolean matches(String internalName);
+	boolean matches(NullAwareType type);
 }

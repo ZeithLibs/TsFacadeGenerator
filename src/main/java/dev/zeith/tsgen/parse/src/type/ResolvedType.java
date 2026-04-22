@@ -1,5 +1,6 @@
 package dev.zeith.tsgen.parse.src.type;
 
+import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.src.parse.ParseContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,8 +34,8 @@ public record ResolvedType(String simpleName, String internalName, String generi
 	}
 	
 	@Override
-	public boolean matches(String internalName)
+	public boolean matches(NullAwareType type)
 	{
-		return this.internalName.equals(internalName);
+		return this.internalName.equals(type.type().getInternalName());
 	}
 }

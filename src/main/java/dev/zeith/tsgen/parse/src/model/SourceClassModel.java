@@ -23,7 +23,7 @@ public record SourceClassModel(
 		for(var e : fields)
 		{
 			if(e.isStatic() == b.isStatic() && e.name().equals(b.name())
-					&& e.type().matches(b.type().type().getInternalName())
+					&& e.type().matches(b.type())
 			) return e;
 		}
 		return null;
@@ -34,7 +34,7 @@ public record SourceClassModel(
 		for(var e : methods)
 		{
 			if(e.isStatic() == b.isStatic() && e.name().equals(b.name())
-					&& e.returnType().matches(b.returnType().type().getInternalName())
+					&& e.returnType().matches(b.returnType())
 					&& matchSignature(b.args(), e.parameters())
 			) return e;
 		}
@@ -53,7 +53,7 @@ public record SourceClassModel(
 	{
 		if(types.length != params.size()) return false;
 		for(int i = 0; i < types.length; i++)
-			if(!params.get(i).type().matches(types[i].type().getInternalName()))
+			if(!params.get(i).type().matches(types[i]))
 				return false;
 		return true;
 	}

@@ -1,5 +1,6 @@
 package dev.zeith.tsgen.parse.src.type;
 
+import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.src.parse.ParseContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,9 +35,11 @@ public record UndecidedType(String simpleName, String generics, ParseContext con
 	}
 	
 	@Override
-	public boolean matches(String internalName)
+	public boolean matches(NullAwareType type)
 	{
-		return internalNames().anyMatch(internalName::equals);
+		if(type.signature() != null && type.signature().paramRef() != null && type.signature().paramRef().equals(simpleName))
+			return true;
+		return internalNames().anyMatch(type.type().getInternalName()::equals);
 	}
 	
 	Stream<String> internalNames()

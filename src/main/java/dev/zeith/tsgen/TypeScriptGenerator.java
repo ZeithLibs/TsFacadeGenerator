@@ -114,7 +114,7 @@ public class TypeScriptGenerator
 		if(sourceModel != null) appendComment(out, 0, 0, sourceModel.commentBlock());
 		out.append(newline).append("export declare class ").append(model.getSimpleName());
 		appendClassGenerics(out);
-		appendClassExtensions(out, false);
+		appendClassExtensions(out, true);
 		out.append(" {");
 		
 		boolean needNewLine = false;
@@ -188,7 +188,7 @@ public class TypeScriptGenerator
 	{
 		out.append("export interface ").append(model.getSimpleName());
 		appendClassGenerics(out);
-		appendClassExtensions(out, true);
+		appendClassExtensions(out, false);
 		out.append(" {");
 		
 		boolean needNewLine = false;

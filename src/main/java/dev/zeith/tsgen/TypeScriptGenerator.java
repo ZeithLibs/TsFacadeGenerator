@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class TypeScriptGenerator
 {
 	// Predicate for matching field/method names.
-	public static Predicate<String> TS_IDENTIFIER = Pattern.compile("^[\\p{L}_$][\\p{L}\\p{N}_$]*$").asMatchPredicate();
+	public static Predicate<String> TS_IDENTIFIER = Pattern.compile("^[\\p{L}_$][\\p{L}\\p{N}_$]*[?]?$").asMatchPredicate();
 	
 	/**
 	 * Alternative TS-friendly names
@@ -26,7 +26,8 @@ public class TypeScriptGenerator
 	public static final Map<String, String> TS_ALTS = Map.of(
 			"java/lang/Object", "object",
 			"java/lang/String", "string",
-			"java/lang/Void", "void"
+			"java/lang/Void", "void",
+			"java/lang/Boolean", "boolean"
 //			"java/util/Map", "Map",
 //			"java/util/Set", "Set"
 	);
@@ -198,7 +199,7 @@ public class TypeScriptGenerator
 		out.append(" {");
 		
 		boolean needNewLine = false;
-		
+		boolean hasLambdaMethod = false;
 		if(model.isInterface())
 		{
 			// find functional method
@@ -208,6 +209,7 @@ public class TypeScriptGenerator
 				var method = fnMethods.get(0);
 				appendRenamedMethod(newline + indent, out, method, "");
 				needNewLine = true;
+				hasLambdaMethod = true;
 			}
 		}
 		
@@ -226,7 +228,7 @@ public class TypeScriptGenerator
 		for(var method : model.methods())
 		{
 			if(method.isStatic()) continue;
-			appendMethod(newline + indent, out, method);
+			appendRenamedMethod(newline + indent, out, method, hasLambdaMethod ? method.name() + "?" : method.name());
 			needNewLine = true;
 		}
 		if(needNewLine)

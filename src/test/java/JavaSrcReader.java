@@ -19,17 +19,18 @@ public class JavaSrcReader
 		// Clean directory before dumping ts
 		deleteDir(targetDir);
 		
-		Path root = Path.of("P:\\$Code\\Minecraft\\Commissions\\Permanent\\Storytelling-8.5");
+		Path root = Path.of(".");
+//		root = Path.of("P:\\$Code\\Minecraft\\Commissions\\Permanent\\Storytelling-8.5");
 		String binFolder = "build/classes/java/main/";
 		String srcFolder = "src/main/java/";
 		
 		List<String> allExports = List.of(
 //				"dev/zeith/tsgen/TypeScriptGenerator",
-//				"dev/zeith/tsgen/IPathResolver",
+				"dev/zeith/tsgen/IPathResolver",
 //				"dev/zeith/tsgen/GeneratorExceptionHandler",
-//				"dev/zeith/tsgen/BulkTypeScriptExporter"
-				"com/storyteam/storytelling/script/performer/builder/PerformerBuilder",
-				"com/storyteam/storytelling/script/performer/builder/ScriptPerformerBuilder"
+				"dev/zeith/tsgen/BulkTypeScriptExporter"
+//				"com/storyteam/storytelling/script/performer/builder/PerformerBuilder",
+//				"com/storyteam/storytelling/script/performer/builder/ScriptPerformerBuilder"
 		);
 		
 		BulkTypeScriptExporter exporter = BulkTypeScriptExporter

@@ -31,6 +31,13 @@ public class TypeScriptGenerator
 //			"java/util/Set", "Set"
 	);
 	
+	private static final Set<String> JS_RESERVED = Set.of(
+			"break", "case", "catch", "class", "const", "continue", "debugger", "default",
+			"delete", "do", "else", "export", "extends", "finally", "for", "function",
+			"if", "import", "in", "instanceof", "let", "new", "return", "super", "switch",
+			"this", "throw", "try", "typeof", "var", "void", "while", "with", "yield"
+	);
+	
 	protected final ClassModel model;
 	protected final @Nullable SourceClassModel sourceModel;
 	
@@ -136,18 +143,17 @@ public class TypeScriptGenerator
 			out.append(newline).append(indent)
 			   .append("constructor(");
 			
-			if(parameterNames != null)
+			List<String> pnames = new ArrayList<>();
+			var args = ctor.args();
+			for(int i = 0; i < args.length; i++)
 			{
-				List<String> pnames = new ArrayList<>();
-				var args = ctor.args();
-				for(int i = 0; i < args.length; i++)
-				{
-					NullAwareType a = args[i];
-					pnames.add(parameterNames.get(i) + ": " + mapType(a));
-				}
-				out.append(String.join(", ", pnames));
-			} else
-				out.append(Arrays.stream(ctor.args()).map(t -> t.name() + ": " + mapType(t)).collect(Collectors.joining(", ")));
+				NullAwareType a = args[i];
+				String pref = "";
+				if(i == args.length - 1 && ctor.isLastVararg()) pref = "...";
+				String param = parameterNames != null && a.decodedName() == null ? parameterNames.get(i) : a.name();
+				pnames.add(pref + paramName(i, param) + ": " + mapType(a));
+			}
+			out.append(String.join(", ", pnames));
 			
 			out.append(");");
 		}
@@ -386,7 +392,8 @@ public class TypeScriptGenerator
 				NullAwareType a = args[i];
 				String pref = "";
 				if(i == args.length - 1 && method.isLastVararg()) pref = "...";
-				pnames.add(pref + (parameterNames != null && a.decodedName() == null ? parameterNames.get(i) : a.name()) + ": " + mapType(a));
+				String param = parameterNames != null && a.decodedName() == null ? parameterNames.get(i) : a.name();
+				pnames.add(pref + paramName(i, param) + ": " + mapType(a));
 			}
 			sb.append(String.join(", ", pnames));
 			
@@ -398,6 +405,13 @@ public class TypeScriptGenerator
 		}
 		
 		output.append(sb);
+	}
+	
+	protected String paramName(int index, String parName)
+	{
+		if(JS_RESERVED.contains(parName))
+			return Character.toUpperCase(parName.charAt(0)) + parName.substring(1);
+		return parName;
 	}
 	
 	protected GeneratorExceptionHandler handleRuntimeException(RuntimeException ex)

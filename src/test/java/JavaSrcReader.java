@@ -19,11 +19,17 @@ public class JavaSrcReader
 		// Clean directory before dumping ts
 		deleteDir(targetDir);
 		
+		Path root = Path.of("P:\\$Code\\Minecraft\\Commissions\\Permanent\\Storytelling-8.5");
+		String binFolder = "build/classes/java/main/";
+		String srcFolder = "src/main/java/";
+		
 		List<String> allExports = List.of(
-				"dev/zeith/tsgen/TypeScriptGenerator",
-				"dev/zeith/tsgen/IPathResolver",
-				"dev/zeith/tsgen/GeneratorExceptionHandler",
-				"dev/zeith/tsgen/BulkTypeScriptExporter"
+//				"dev/zeith/tsgen/TypeScriptGenerator",
+//				"dev/zeith/tsgen/IPathResolver",
+//				"dev/zeith/tsgen/GeneratorExceptionHandler",
+//				"dev/zeith/tsgen/BulkTypeScriptExporter"
+				"com/storyteam/storytelling/script/performer/builder/PerformerBuilder",
+				"com/storyteam/storytelling/script/performer/builder/ScriptPerformerBuilder"
 		);
 		
 		BulkTypeScriptExporter exporter = BulkTypeScriptExporter
@@ -34,8 +40,8 @@ public class JavaSrcReader
 		
 		for(String classPath : allExports)
 		{
-			var code = Files.readString(Path.of("src/main/java/" + classPath + ".java"));
-			var bytecode = Files.readAllBytes(Path.of("build/classes/java/main/" + classPath + ".class"));
+			String code = Files.readString(root.resolve(srcFolder + classPath + ".java"));
+			byte[] bytecode = Files.readAllBytes(root.resolve(binFolder + classPath + ".class"));
 			
 			var srcParser = ISourceParserFactory.BLEEDING_EDGE.createParser();
 			

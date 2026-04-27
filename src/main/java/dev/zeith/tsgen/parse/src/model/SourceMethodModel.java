@@ -13,7 +13,7 @@ public record SourceMethodModel(
 		List<SourceMethodParamModel> parameters,
 		boolean isStatic,
 		boolean isPublic
-)
+) implements IGeneralSourceModel
 {
 	public static SourceMethodModel parse(ParseContext ctx, MethodDeclaration md)
 	{

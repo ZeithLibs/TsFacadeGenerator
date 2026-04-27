@@ -1,5 +1,6 @@
 package dev.zeith.tsgen;
 
+import dev.zeith.tsgen.api.*;
 import dev.zeith.tsgen.exceptions.TypeScriptGenException;
 import dev.zeith.tsgen.imports.*;
 import dev.zeith.tsgen.parse.NullAwareType;
@@ -13,7 +14,7 @@ import org.objectweb.asm.Type;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.*;
-import java.util.stream.Collectors;
+import java.util.stream.*;
 
 public class TypeScriptGenerator
 {
@@ -48,10 +49,25 @@ public class TypeScriptGenerator
 	public GeneratorExceptionHandler exceptionHandler = GeneratorExceptionHandler.GLOBAL_FAIL;
 	public final Set<Type> imports = new HashSet<>();
 	
+	protected final List<ITypeExtension> typeExtensions;
+	
 	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel)
+	{
+		this(model, sourceModel, IGenerationExtension::defaultEnabled);
+	}
+	
+	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel, Predicate<IGenerationExtension> enabledExtensions)
+	{
+		this(model, sourceModel,
+				IGenerationExtension.get().stream().filter(enabledExtensions).map(e -> e.createForType(model, sourceModel)).filter(Objects::nonNull).toList()
+		);
+	}
+	
+	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel, List<ITypeExtension> typeExtensions)
 	{
 		this.model = model;
 		this.sourceModel = sourceModel;
+		this.typeExtensions = typeExtensions;
 	}
 	
 	public TypeScriptGenerator withNewline(String newline)
@@ -76,6 +92,21 @@ public class TypeScriptGenerator
 	{
 		this.importModel = Objects.requireNonNull(importModel, "importModel");
 		return this;
+	}
+	
+	protected Iterable<ConstructorModel> constructors()
+	{
+		return () -> Stream.concat(ITypeExtension.getExtraConstructors(this.typeExtensions), this.model.constructors().stream()).iterator();
+	}
+	
+	protected Iterable<FieldModel> fields()
+	{
+		return () -> Stream.concat(ITypeExtension.getExtraFields(this.typeExtensions), this.model.fields().stream()).iterator();
+	}
+	
+	protected Iterable<MethodModel> methods()
+	{
+		return () -> Stream.concat(ITypeExtension.getExtraMethods(this.typeExtensions), this.model.methods().stream()).iterator();
 	}
 	
 	public void generate(StringBuilder out, boolean genImports)
@@ -104,13 +135,25 @@ public class TypeScriptGenerator
 		}
 	}
 	
-	protected void appendComment(StringBuilder out, int spacingAbove, int indent, @Nullable String commentBlock)
+	protected void appendComment(StringBuilder out, int spacingAbove, int indent, IGeneralModel model, @Nullable IGeneralSourceModel srcModel)
 	{
-		if(commentBlock == null) return;
+		var lines = model.commentLines();
+		if(lines == null && srcModel != null)
+		{
+			var com = srcModel.commentBlock();
+			if(com != null) lines = com.lines();
+		} else if(lines != null)
+		{
+			lines = Stream.concat(Stream.of("/**"), lines.map(ln -> "* " + ln));
+			lines = Stream.concat(lines, Stream.of("*/"));
+		}
+		
+		if(lines == null) return;
+		
 		String indentedNL = newline + this.indent.repeat(indent);
+		
 		out.append(indentedNL.repeat(spacingAbove))
-		   .append(commentBlock
-				   .lines()
+		   .append(lines
 				   .map(String::trim)
 				   .map(s -> s.startsWith("*") ? " " + s : s)
 				   .collect(Collectors.joining(indentedNL))
@@ -119,7 +162,7 @@ public class TypeScriptGenerator
 	
 	protected void generateDeclare(StringBuilder out)
 	{
-		if(sourceModel != null) appendComment(out, 0, 0, sourceModel.commentBlock());
+		appendComment(out, 0, 0, model, sourceModel);
 		out.append(newline).append("export declare class ").append(model.getSimpleName());
 		appendClassGenerics(out);
 		appendClassExtensions(out, true);
@@ -127,18 +170,16 @@ public class TypeScriptGenerator
 		
 		boolean needNewLine = false;
 		
-		for(ConstructorModel ctor : model.constructors())
+		for(ConstructorModel ctor : constructors())
 		{
 			List<String> parameterNames = null;
+			SourceConstructorModel scm = null;
 			if(sourceModel != null)
 			{
-				SourceConstructorModel scm = sourceModel.findSourceMethod(ctor);
-				if(scm != null)
-				{
-					appendComment(out, 1, 1, scm.commentBlock());
-					parameterNames = scm.parameters().stream().map(SourceMethodParamModel::name).toList();
-				}
+				scm = sourceModel.findSourceCtor(ctor);
+				if(scm != null) parameterNames = scm.parameters().stream().map(SourceMethodParamModel::name).toList();
 			}
+			appendComment(out, 1, 1, ctor, scm);
 			
 			needNewLine = true;
 			out.append(newline).append(indent)
@@ -164,7 +205,7 @@ public class TypeScriptGenerator
 			needNewLine = false;
 		}
 		
-		for(var field : model.fields())
+		for(var field : fields())
 		{
 			if(!field.isStatic()) continue;
 			appendField(newline + indent + "static ", out, field);
@@ -176,7 +217,7 @@ public class TypeScriptGenerator
 			needNewLine = false;
 		}
 		
-		for(var method : model.methods())
+		for(var method : methods())
 		{
 			if(!method.isStatic()) continue;
 			appendMethod(newline + indent + "static ", out, method);
@@ -213,7 +254,7 @@ public class TypeScriptGenerator
 			}
 		}
 		
-		for(var field : model.fields())
+		for(var field : fields())
 		{
 			if(field.isStatic()) continue;
 			appendField(newline + indent, out, field);
@@ -225,7 +266,7 @@ public class TypeScriptGenerator
 			needNewLine = false;
 		}
 		
-		for(var method : model.methods())
+		for(var method : methods())
 		{
 			if(method.isStatic()) continue;
 			appendRenamedMethod(newline + indent, out, method, hasLambdaMethod ? method.name() + "?" : method.name());
@@ -318,11 +359,8 @@ public class TypeScriptGenerator
 		
 		StringBuilder sb = new StringBuilder();
 		
-		if(sourceModel != null)
-		{
-			SourceFieldModel sfm = sourceModel.findSourceField(field);
-			if(sfm != null) appendComment(sb, 1, 1, sfm.commentBlock());
-		}
+		SourceFieldModel sfm = sourceModel != null ? sourceModel.findSourceField(field) : null;
+		appendComment(sb, 1, 1, field, sfm);
 		
 		try
 		{
@@ -353,15 +391,13 @@ public class TypeScriptGenerator
 		StringBuilder sb = new StringBuilder();
 		
 		List<String> parameterNames = null;
+		SourceMethodModel smm = null;
 		if(sourceModel != null)
 		{
-			SourceMethodModel smm = sourceModel.findSourceMethod(method);
-			if(smm != null)
-			{
-				appendComment(sb, 1, 1, smm.commentBlock());
-				parameterNames = smm.parameters().stream().map(SourceMethodParamModel::name).toList();
-			}
+			smm = sourceModel.findSourceMethod(method);
+			if(smm != null) parameterNames = smm.parameters().stream().map(SourceMethodParamModel::name).toList();
 		}
+		appendComment(sb, 1, 1, method, smm);
 		
 		try
 		{

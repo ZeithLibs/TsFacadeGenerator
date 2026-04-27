@@ -10,6 +10,7 @@ public record SourceConstructorModel(
 		List<SourceMethodParamModel> parameters,
 		boolean isPublic
 )
+		implements IGeneralSourceModel
 {
 	public static SourceConstructorModel parse(ParseContext ctx, ConstructorDeclaration md)
 	{

@@ -1,12 +1,17 @@
 package dev.zeith.tsgen.parse.model;
 
 import dev.zeith.tsgen.parse.NullAwareType;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.*;
+
+import java.util.stream.Stream;
 
 public record ConstructorModel(
 		int access,
-		NullAwareType[] args
+		NullAwareType[] args,
+		String comment
 )
+		implements IGeneralModel
 {
 	public boolean isPublic()
 	{
@@ -16,5 +21,11 @@ public record ConstructorModel(
 	public boolean isLastVararg()
 	{
 		return (access & Opcodes.ACC_VARARGS) != 0 && args.length > 0 && args[args.length - 1].type().getSort() == Type.ARRAY;
+	}
+	
+	@Override
+	public @Nullable Stream<String> commentLines()
+	{
+		return comment != null ? comment.lines() : null;
 	}
 }

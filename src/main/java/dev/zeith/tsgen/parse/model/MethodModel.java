@@ -2,17 +2,21 @@ package dev.zeith.tsgen.parse.model;
 
 import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.sig.TypeParameter;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.*;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 public record MethodModel(
 		int access,
 		String name,
 		List<TypeParameter> typeParameters,
 		NullAwareType returnType,
-		NullAwareType[] args
+		NullAwareType[] args,
+		String comment
 )
+		implements IGeneralModel
 {
 	public boolean isLastVararg()
 	{
@@ -37,5 +41,11 @@ public record MethodModel(
 	public boolean isFunctionalMethod()
 	{
 		return (access & Opcodes.ACC_ABSTRACT) != 0;
+	}
+	
+	@Override
+	public @Nullable Stream<String> commentLines()
+	{
+		return comment != null ? comment.lines() : null;
 	}
 }

@@ -15,6 +15,7 @@ public record NullAwareType(
 )
 {
 	public static final Type JAVA_LANG_OBJECT = Type.getObjectType("java/lang/Object");
+	public static final Type JAVA_LANG_CLASS = Type.getObjectType("java/lang/Class");
 	
 	public String name()
 	{

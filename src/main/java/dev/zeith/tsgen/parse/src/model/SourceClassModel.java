@@ -16,7 +16,7 @@ public record SourceClassModel(
 		List<SourceConstructorModel> constructors,
 		List<SourceFieldModel> fields,
 		List<SourceMethodModel> methods
-)
+) implements IGeneralSourceModel
 {
 	public SourceFieldModel findSourceField(FieldModel b)
 	{
@@ -41,7 +41,7 @@ public record SourceClassModel(
 		return null;
 	}
 	
-	public SourceConstructorModel findSourceMethod(ConstructorModel b)
+	public SourceConstructorModel findSourceCtor(ConstructorModel b)
 	{
 		for(var e : constructors)
 			if(e.isPublic() == b.isPublic() && matchSignature(b.args(), e.parameters()))

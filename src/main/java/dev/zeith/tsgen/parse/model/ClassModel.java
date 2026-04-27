@@ -27,8 +27,10 @@ public record ClassModel(
 		@Singular List<MethodModel> methods,
 		@Singular List<ConstructorModel> constructors,
 		List<AnnotationNode> visibleAnnotations,
-		List<AnnotationNode> invisibleAnnotations
+		List<AnnotationNode> invisibleAnnotations,
+		@Nullable String comment
 )
+		implements IGeneralModel
 {
 	public boolean isInterface()
 	{
@@ -98,7 +100,8 @@ public record ClassModel(
 				fields.add(new FieldModel(
 						isStatic,
 						n.name,
-						NullAwareType.of(-1, EnumNullability.of(n), Type.getType(n.desc), n.signature)
+						NullAwareType.of(-1, EnumNullability.of(n), Type.getType(n.desc), n.signature),
+						null
 				));
 			}
 			
@@ -149,7 +152,7 @@ public record ClassModel(
 				
 				if(n.name.startsWith("<"))
 				{
-					if(n.name.equals("<init>")) ctors.add(new ConstructorModel(n.access, args));
+					if(n.name.equals("<init>")) ctors.add(new ConstructorModel(n.access, args, null));
 					continue;
 				}
 				
@@ -158,7 +161,8 @@ public record ClassModel(
 						n.name,
 						gen != null ? gen.typeParameters() : null,
 						new NullAwareType(-1, "ret", EnumNullability.ofReturnType(n), Type.getReturnType(n.desc), gen != null ? gen.returnType() : null),
-						args
+						args,
+						null
 				));
 			}
 			
@@ -174,11 +178,18 @@ public record ClassModel(
 					methods,
 					ctors,
 					node.visibleAnnotations,
-					node.invisibleAnnotations
+					node.invisibleAnnotations,
+					null
 			);
 		} catch(Exception e)
 		{
 			throw new ClassModelParseException(e);
 		}
+	}
+	
+	@Override
+	public @Nullable Stream<String> commentLines()
+	{
+		return comment != null ? comment.lines() : null;
 	}
 }

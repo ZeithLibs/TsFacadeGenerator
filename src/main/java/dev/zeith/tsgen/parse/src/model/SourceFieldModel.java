@@ -12,7 +12,7 @@ public record SourceFieldModel(
 		ISourceType type,
 		boolean isStatic,
 		boolean isPublic
-)
+) implements IGeneralSourceModel
 {
 	public static List<SourceFieldModel> parse(ParseContext ctx, FieldDeclaration decl)
 	{

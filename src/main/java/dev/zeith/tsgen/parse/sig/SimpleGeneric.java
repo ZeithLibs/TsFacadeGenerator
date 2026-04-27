@@ -11,6 +11,22 @@ import java.util.stream.Collectors;
 
 public record SimpleGeneric(Type base, String paramRef, @With int dimensions, List<SimpleGeneric> typeArgs, WildcardKind wildcard)
 {
+	public static SimpleGeneric ofStrictType(Type type)
+	{
+		return ofStrictTypeWithTypeArgs(type, List.of());
+	}
+	
+	public static SimpleGeneric ofStrictTypeWithTypeArgs(Type type, List<SimpleGeneric> typeArgs)
+	{
+		return new SimpleGeneric(
+				type,
+				null,
+				0,
+				typeArgs,
+				WildcardKind.NONE
+		);
+	}
+	
 	public Set<Type> getImports()
 	{
 		Set<Type> list = new HashSet<>();

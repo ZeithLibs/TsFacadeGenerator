@@ -5,9 +5,12 @@ import dev.zeith.tsgen.parse.src.model.SourceClassModel;
 import org.jetbrains.annotations.*;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public interface IGenerationExtension
 {
+	Predicate<IGenerationExtension> DEFAULT_ENABLED = IGenerationExtension::defaultEnabled;
+	
 	String getId();
 	
 	boolean defaultEnabled();

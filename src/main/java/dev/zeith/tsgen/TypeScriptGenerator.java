@@ -53,14 +53,12 @@ public class TypeScriptGenerator
 	
 	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel)
 	{
-		this(model, sourceModel, IGenerationExtension::defaultEnabled);
+		this(model, sourceModel, IGenerationExtension.DEFAULT_ENABLED);
 	}
 	
 	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel, Predicate<IGenerationExtension> enabledExtensions)
 	{
-		this(model, sourceModel,
-				IGenerationExtension.get().stream().filter(enabledExtensions).map(e -> e.createForType(model, sourceModel)).filter(Objects::nonNull).toList()
-		);
+		this(model, sourceModel, ITypeExtension.gather(enabledExtensions, model, sourceModel));
 	}
 	
 	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel, List<ITypeExtension> typeExtensions)

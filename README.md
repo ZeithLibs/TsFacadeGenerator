@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation("dev.zeith.libs:TsFacadeGenerator:1.2.0")
+    implementation("dev.zeith.libs:TsFacadeGenerator:1.3.0")
 }
 ```
 
@@ -21,7 +21,8 @@ dependencies {
 This simple code reads the class file from file, parses the internal class model and converts it into typescript, writing it into file:
 ```java
 byte[] bytecode = Files.readAllBytes(Path.of("Example.class"));
-TypeScriptGenerator gen = new TypeScriptGenerator(ClassModel.parse(bytecode));
+TSGenSettings genSettings = TSGenSettings.builder().build();
+TypeScriptGenerator gen = new TypeScriptGenerator(genSettings, ClassModel.parse(bytecode));
 
 StringBuilder sb = new StringBuilder();
 gen.generate(sb, true);

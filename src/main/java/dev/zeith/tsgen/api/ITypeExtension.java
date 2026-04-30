@@ -2,6 +2,7 @@ package dev.zeith.tsgen.api;
 
 import dev.zeith.tsgen.parse.model.*;
 import dev.zeith.tsgen.parse.src.model.SourceClassModel;
+import org.jetbrains.annotations.*;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -39,7 +40,7 @@ public interface ITypeExtension
 		return extensions.stream().flatMap(ITypeExtension::getExtraMethods);
 	}
 	
-	static List<ITypeExtension> gather(Predicate<IGenerationExtension> enabledExtensions, ClassModel model, SourceClassModel sourceModel)
+	static List<ITypeExtension> gather(@NotNull Predicate<IGenerationExtension> enabledExtensions, @NotNull ClassModel model, @Nullable SourceClassModel sourceModel)
 	{
 		return IGenerationExtension.get().stream().filter(enabledExtensions).map(e -> e.createForType(model, sourceModel)).filter(Objects::nonNull).toList();
 	}

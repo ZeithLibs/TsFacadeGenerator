@@ -2,7 +2,7 @@ package dev.zeith.tsgen;
 
 import dev.zeith.tsgen.api.*;
 import dev.zeith.tsgen.exceptions.TypeScriptGenException;
-import dev.zeith.tsgen.imports.*;
+import dev.zeith.tsgen.imports.IImportModel;
 import dev.zeith.tsgen.parse.NullAwareType;
 import dev.zeith.tsgen.parse.model.*;
 import dev.zeith.tsgen.parse.sig.*;
@@ -40,56 +40,35 @@ public class TypeScriptGenerator
 			"this", "throw", "try", "typeof", "var", "void", "while", "with", "yield"
 	);
 	
-	protected final ClassModel model;
+	protected final @NotNull ClassModel model;
+	protected final @NotNull TSGenSettings settings;
 	protected final @Nullable SourceClassModel sourceModel;
 	
-	public String newline = "\n";
-	public String indent = "\t";
-	public IImportModel importModel = RequireImportModel.INSTANCE;
-	public GeneratorExceptionHandler exceptionHandler = GeneratorExceptionHandler.GLOBAL_FAIL;
 	public final Set<Type> imports = new HashSet<>();
 	
-	protected final List<ITypeExtension> typeExtensions;
+	protected final @NotNull List<ITypeExtension> typeExtensions;
 	
-	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel)
+	public TypeScriptGenerator(@NotNull TSGenSettings settings, @NotNull ClassModel model)
 	{
-		this(model, sourceModel, IGenerationExtension.DEFAULT_ENABLED);
+		this(settings, model, null);
 	}
 	
-	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel, Predicate<IGenerationExtension> enabledExtensions)
+	public TypeScriptGenerator(@NotNull TSGenSettings settings, @NotNull ClassModel model, @Nullable SourceClassModel sourceModel)
 	{
-		this(model, sourceModel, ITypeExtension.gather(enabledExtensions, model, sourceModel));
+		this(settings, model, sourceModel, IGenerationExtension.DEFAULT_ENABLED);
 	}
 	
-	public TypeScriptGenerator(@NotNull ClassModel model, @Nullable SourceClassModel sourceModel, List<ITypeExtension> typeExtensions)
+	public TypeScriptGenerator(@NotNull TSGenSettings settings, @NotNull ClassModel model, @Nullable SourceClassModel sourceModel, @NotNull Predicate<IGenerationExtension> enabledExtensions)
 	{
+		this(settings, model, sourceModel, ITypeExtension.gather(enabledExtensions, model, sourceModel));
+	}
+	
+	public TypeScriptGenerator(@NotNull TSGenSettings settings, @NotNull ClassModel model, @Nullable SourceClassModel sourceModel, @NotNull List<ITypeExtension> typeExtensions)
+	{
+		this.settings = settings;
 		this.model = model;
 		this.sourceModel = sourceModel;
 		this.typeExtensions = typeExtensions;
-	}
-	
-	public TypeScriptGenerator withNewline(String newline)
-	{
-		this.newline = Objects.requireNonNull(newline, "newline");
-		return this;
-	}
-	
-	public TypeScriptGenerator withExceptionHandler(GeneratorExceptionHandler exceptionHandler)
-	{
-		this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
-		return this;
-	}
-	
-	public TypeScriptGenerator withIndentation(String indentation)
-	{
-		this.indent = Objects.requireNonNull(indentation, "indentation");
-		return this;
-	}
-	
-	public TypeScriptGenerator withImportModel(IImportModel importModel)
-	{
-		this.importModel = Objects.requireNonNull(importModel, "importModel");
-		return this;
 	}
 	
 	protected Iterable<ConstructorModel> constructors()
@@ -113,6 +92,7 @@ public class TypeScriptGenerator
 		imports.clear();
 		
 		final int startPos = out.length(); // saved for imports
+		final var newline = settings.newline;
 		
 		try
 		{
@@ -148,7 +128,8 @@ public class TypeScriptGenerator
 		
 		if(lines == null) return;
 		
-		String indentedNL = newline + this.indent.repeat(indent);
+		final var newline = settings.newline;
+		String indentedNL = newline + settings.indent.repeat(indent);
 		
 		out.append(indentedNL.repeat(spacingAbove))
 		   .append(lines
@@ -160,6 +141,9 @@ public class TypeScriptGenerator
 	
 	protected void generateDeclare(StringBuilder out)
 	{
+		final var newline = settings.newline;
+		final var indent = settings.indent;
+		
 		appendComment(out, 0, 0, model, sourceModel);
 		out.append(newline).append("export declare class ").append(model.getSimpleName());
 		appendClassGenerics(out);
@@ -189,7 +173,7 @@ public class TypeScriptGenerator
 			{
 				NullAwareType a = args[i];
 				String pref = "";
-				if(i == args.length - 1 && ctor.isLastVararg()) pref = "...";
+				if(i == args.length - 1 && ctor.isLastVararg() && settings.enableVarargs) pref = "...";
 				String param = parameterNames != null && a.decodedName() == null ? parameterNames.get(i) : a.name();
 				pnames.add(pref + paramName(i, param) + ": " + mapType(a));
 			}
@@ -232,6 +216,9 @@ public class TypeScriptGenerator
 	
 	protected void generateInterface(StringBuilder out)
 	{
+		final var newline = settings.newline;
+		final var indent = settings.indent;
+		
 		out.append("export interface ").append(model.getSimpleName());
 		appendClassGenerics(out);
 		appendClassExtensions(out, false);
@@ -427,7 +414,7 @@ public class TypeScriptGenerator
 			{
 				NullAwareType a = args[i];
 				String pref = "";
-				if(i == args.length - 1 && method.isLastVararg()) pref = "...";
+				if(i == args.length - 1 && method.isLastVararg() && settings.enableVarargs) pref = "...";
 				String param = parameterNames != null && a.decodedName() == null ? parameterNames.get(i) : a.name();
 				pnames.add(pref + paramName(i, param) + ": " + mapType(a));
 			}
@@ -452,14 +439,14 @@ public class TypeScriptGenerator
 	
 	protected GeneratorExceptionHandler handleRuntimeException(RuntimeException ex)
 	{
-		if(exceptionHandler == GeneratorExceptionHandler.GLOBAL_FAIL)
+		if(settings.exceptionHandler == GeneratorExceptionHandler.GLOBAL_FAIL)
 			throw ex;
-		return exceptionHandler;
+		return settings.exceptionHandler;
 	}
 	
 	public String generateImports()
 	{
-		return importModel.generateImports(newline, model.name(), imports.stream().sorted(IImportModel.IMPORT_COMPARATOR).toList());
+		return settings.importModel.generateImports(settings.newline, model.name(), imports.stream().sorted(IImportModel.IMPORT_COMPARATOR).toList());
 	}
 	
 	protected static final Pattern TYPE_FINDER = Pattern.compile("L[^;]+;");

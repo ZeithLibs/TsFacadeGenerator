@@ -69,7 +69,8 @@ public class BulkTypeScriptExporter
 		// Create parent directory
 		dst.toPath().getParent().toFile().mkdirs();
 		
-		TypeScriptGenerator gen = new TypeScriptGenerator(model, sourceModel, typeExtensions).withImportModel(this.importModel);
+		var settings = TSGenSettings.builder().importModel(this.importModel).build();
+		TypeScriptGenerator gen = new TypeScriptGenerator(settings, model, sourceModel, typeExtensions);
 		StringBuilder sb = new StringBuilder();
 		configurator.accept(gen);
 		

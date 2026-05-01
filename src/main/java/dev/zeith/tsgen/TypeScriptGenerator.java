@@ -226,7 +226,7 @@ public class TypeScriptGenerator
 		
 		boolean needNewLine = false;
 		boolean hasLambdaMethod = false;
-		if(model.isInterface())
+		if(model.isFunctionalInterface())
 		{
 			// find functional method
 			List<MethodModel> fnMethods = model.methods().stream().filter(MethodModel::isFunctionalMethod).toList();

@@ -19,17 +19,17 @@ public class BulkTypeScriptExporter
 {
 	protected final File outDir;
 	protected final BaseImportModel importModel;
-	protected final Consumer<TypeScriptGenerator> configurator;
+	protected final Consumer<TSGenSettings.TSGenSettingsBuilder> configurator;
 	protected final @Getter IPathResolver pathResolver;
 	
 	@Getter
-	protected final Set<File> toOptimize = ConcurrentHashMap.newKeySet();
+	protected final Map<File, String> toOptimize = new ConcurrentHashMap<>();
 	
 	@Builder
 	public BulkTypeScriptExporter(
 			File outDir,
 			BaseImportModel importModel,
-			Consumer<TypeScriptGenerator> configurator,
+			Consumer<TSGenSettings.TSGenSettingsBuilder> configurator,
 			IPathResolver pathResolver
 	)
 	{
@@ -64,15 +64,16 @@ public class BulkTypeScriptExporter
 			throws IOException
 	{
 		File dst = new File(outDir, getFilePathOf(model.name())).getAbsoluteFile();
-		toOptimize.add(dst);
 		
 		// Create parent directory
 		dst.toPath().getParent().toFile().mkdirs();
 		
-		var settings = TSGenSettings.builder().importModel(this.importModel).build();
-		TypeScriptGenerator gen = new TypeScriptGenerator(settings, model, sourceModel, typeExtensions);
+		var settings = TSGenSettings.builder().importModel(this.importModel);
+		configurator.accept(settings);
+		var set = settings.build();
+		toOptimize.put(dst, set.newline);
+		TypeScriptGenerator gen = new TypeScriptGenerator(set, model, sourceModel, typeExtensions);
 		StringBuilder sb = new StringBuilder();
-		configurator.accept(gen);
 		
 		if(dst.isFile())
 		{
@@ -101,27 +102,27 @@ public class BulkTypeScriptExporter
 	public void optimize()
 			throws IOException
 	{
-		for(File file : toOptimize)
-			optimize(file, importModel);
+		for(var e : toOptimize.entrySet())
+			optimize(e.getKey(), importModel, e.getValue());
 	}
 	
 	public void optimize(String prefix, String suffix)
 			throws IOException
 	{
-		for(File file : toOptimize)
-			optimize(file, importModel, prefix, suffix);
+		for(var e : toOptimize.entrySet())
+			optimize(e.getKey(), importModel, e.getValue(), prefix, suffix);
 	}
 	
-	public static void optimize(File file, IImportModel importModel)
+	public static void optimize(File file, IImportModel importModel, String newline)
 			throws IOException
 	{
-		optimize(file, importModel, "", "");
+		optimize(file, importModel, newline, "", "");
 	}
 	
-	public static void optimize(File file, IImportModel importModel, String prefix, String suffix)
+	public static void optimize(File file, IImportModel importModel, String newline, String prefix, String suffix)
 			throws IOException
 	{
-		String optimized = importModel.reduceImports(file.getName(), Files.lines(file.toPath()));
+		String optimized = importModel.reduceImports(newline, file.getName(), Files.lines(file.toPath()));
 		Files.writeString(file.toPath(), prefix + optimized + suffix, StandardCharsets.UTF_8);
 	}
 	

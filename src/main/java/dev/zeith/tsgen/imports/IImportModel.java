@@ -19,9 +19,8 @@ public interface IImportModel
 	boolean isImport(String line);
 	
 	@NotNull
-	default String reduceImports(String filename, Stream<String> in)
+	default String reduceImports(String newline, String filename, Stream<String> in)
 	{
-		String newline = "\n";
 		StringBuilder imports = new StringBuilder();
 		StringBuilder types = new StringBuilder();
 		boolean isImports = true;
